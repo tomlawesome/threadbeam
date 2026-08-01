@@ -95,6 +95,24 @@ test('GET / serves the static index page', async (t) => {
   });
 });
 
+test('GET / serves the reordered sections plus theme, mode and sort controls', async (t) => {
+  await withServer(t, async ({ port }) => {
+    const res = await request(port, { path: '/' });
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /class="theme-swatch/);
+    assert.match(res.body, /id="mode-toggle"/);
+    assert.match(res.body, /aria-sort="none"/);
+    assert.ok(
+      res.body.indexOf('id="blockers-heading"') < res.body.indexOf('id="questions-heading"'),
+      'blockers section must precede questions',
+    );
+    assert.ok(
+      res.body.indexOf('id="questions-heading"') < res.body.indexOf('id="live-tasks-heading"'),
+      'questions section must precede live tasks',
+    );
+  });
+});
+
 test('HEAD is permitted and returns no body', async (t) => {
   await withServer(t, async ({ port }) => {
     const res = await request(port, { method: 'HEAD', path: '/api/status' });

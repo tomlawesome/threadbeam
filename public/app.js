@@ -3,6 +3,46 @@
 const POLL_INTERVAL_MS = 5000;
 const KNOWN_PROVIDERS = ['codex', 'claude', 'mistral', 'ollama', 'luna'];
 
+const THEME_STORAGE_KEY = 'agent-dashboard:theme';
+const MODE_STORAGE_KEY = 'agent-dashboard:mode';
+const THEMES = ['ocean', 'violet', 'amber', 'emerald', 'rose'];
+const DEFAULT_THEME = 'ocean';
+const MODES = ['dark', 'light'];
+const DEFAULT_MODE = 'dark';
+const DASHBOARD_FILTERS = {
+  live: { singular: 'active task', plural: 'active tasks', section: 'liveSection' },
+  blockers: { singular: 'blocker', plural: 'blockers', section: 'blockersSection' },
+  questions: { singular: 'open question', plural: 'open questions', section: 'questionsSection' },
+  completed: { singular: 'recently completed task', plural: 'recently completed tasks', section: 'completedSection' },
+};
+
+const STATE_SORT_ORDER = [
+  'blocked',
+  'question',
+  'waiting_ci',
+  'validating',
+  'implementing',
+  'queued',
+  'awaiting_sol_review',
+  'completed',
+];
+
+const LIVE_COLUMNS = [
+  { key: 'provider', type: 'text', get: (t) => `${t.provider} ${t.model}` },
+  { key: 'task', type: 'text', get: (t) => taskLabel(t) },
+  { key: 'project', type: 'text', get: (t) => `${t.repo} / ${t.project}` },
+  { key: 'branch', type: 'text', get: (t) => `${t.branch} (${t.worktree})` },
+  { key: 'state', type: 'state', get: (t) => t.state },
+  { key: 'started', type: 'timestamp', get: (t) => new Date(t.startedAt).getTime() },
+  { key: 'elapsed', type: 'elapsed', get: (t) => Date.now() - new Date(t.startedAt).getTime() },
+  { key: 'lastUpdate', type: 'timestamp', get: (t) => new Date(t.lastUpdateAt).getTime() },
+];
+
+let liveSort = { key: null, direction: 'asc' };
+let lastLiveTasks = [];
+let lastStatus = null;
+let dashboardFilter = 'all';
+
 const el = {
   liveDot: document.getElementById('live-dot'),
   banner: document.getElementById('status-banner'),
@@ -10,8 +50,19 @@ const el = {
   summaryBlockers: document.getElementById('summary-blockers'),
   summaryQuestions: document.getElementById('summary-questions'),
   summaryCompleted: document.getElementById('summary-completed'),
+  summaryFilterAll: document.getElementById('summary-filter-all'),
+  summaryFilterButtons: Array.from(document.querySelectorAll('.stat-filter')),
+  summaryFilterStatus: document.getElementById('summary-filter-status'),
+  blockersSection: document.getElementById('blockers-section'),
+  liveSection: document.getElementById('live-tasks-section'),
+  questionsSection: document.getElementById('questions-section'),
+  completedSection: document.getElementById('completed-section'),
+  timelineSection: document.getElementById('timeline-section'),
   liveBody: document.getElementById('live-tasks-body'),
   liveEmpty: document.getElementById('live-tasks-empty'),
+  sortButtons: Array.from(document.querySelectorAll('#live-tasks-table .sort-button')),
+  mobileSortKey: document.getElementById('mobile-sort-key'),
+  mobileSortDirection: document.getElementById('mobile-sort-direction'),
   blockersList: document.getElementById('blockers-list'),
   blockersEmpty: document.getElementById('blockers-empty'),
   questionsList: document.getElementById('questions-list'),
@@ -21,6 +72,9 @@ const el = {
   timelineList: document.getElementById('timeline-list'),
   timelineEmpty: document.getElementById('timeline-empty'),
   refreshButton: document.getElementById('refresh-button'),
+  themeSwatches: Array.from(document.querySelectorAll('.theme-swatch')),
+  modeToggle: document.getElementById('mode-toggle'),
+  modeToggleLabel: document.getElementById('mode-toggle-label'),
 };
 
 function formatElapsed(ms) {
@@ -39,6 +93,16 @@ function formatTime(iso) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleString();
+}
+
+function formatClockTime(iso) {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
 }
 
 function formatState(state) {
@@ -100,11 +164,92 @@ function stateCell(state) {
   return td;
 }
 
+function stateRank(state) {
+  const index = STATE_SORT_ORDER.indexOf(state);
+  return index === -1 ? STATE_SORT_ORDER.length : index;
+}
+
+function compareLiveColumn(column, a, b) {
+  const va = column.get(a);
+  const vb = column.get(b);
+  if (column.type === 'text') {
+    return String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true });
+  }
+  if (column.type === 'state') {
+    return stateRank(va) - stateRank(vb);
+  }
+  const na = Number.isFinite(va) ? va : Number.NEGATIVE_INFINITY;
+  const nb = Number.isFinite(vb) ? vb : Number.NEGATIVE_INFINITY;
+  return na - nb;
+}
+
+function sortLiveTasks(tasks) {
+  if (!liveSort.key) return tasks;
+  const column = LIVE_COLUMNS.find((c) => c.key === liveSort.key);
+  if (!column) return tasks;
+  const indexed = tasks.map((task, index) => ({ task, index }));
+  indexed.sort((a, b) => {
+    const cmp = compareLiveColumn(column, a.task, b.task);
+    if (cmp !== 0) return liveSort.direction === 'asc' ? cmp : -cmp;
+    return a.index - b.index;
+  });
+  return indexed.map((entry) => entry.task);
+}
+
+function updateSortIndicators() {
+  for (const button of el.sortButtons) {
+    const th = button.closest('th');
+    const key = button.dataset.sortKey;
+    th.setAttribute('aria-sort', liveSort.key === key ? (liveSort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+  }
+  el.mobileSortKey.value = liveSort.key ?? '';
+  el.mobileSortDirection.disabled = !liveSort.key;
+  el.mobileSortDirection.textContent = liveSort.direction === 'desc' ? 'Descending' : 'Ascending';
+  el.mobileSortDirection.setAttribute(
+    'aria-label',
+    liveSort.direction === 'desc' ? 'Sort descending; select to sort ascending' : 'Sort ascending; select to sort descending',
+  );
+}
+
+function setLiveSort(key) {
+  liveSort = liveSort.key === key
+    ? { key, direction: liveSort.direction === 'asc' ? 'desc' : 'asc' }
+    : { key, direction: 'asc' };
+  updateSortIndicators();
+  renderLiveTasks(lastLiveTasks);
+}
+
+function initLiveSortControls() {
+  for (const button of el.sortButtons) {
+    button.addEventListener('click', () => setLiveSort(button.dataset.sortKey));
+  }
+  el.mobileSortKey.addEventListener('change', () => {
+    const key = el.mobileSortKey.value;
+    liveSort = key ? { key, direction: liveSort.key === key ? liveSort.direction : 'asc' } : { key: null, direction: 'asc' };
+    updateSortIndicators();
+    renderLiveTasks(lastLiveTasks);
+  });
+  el.mobileSortDirection.addEventListener('click', () => {
+    if (!liveSort.key) return;
+    liveSort = { key: liveSort.key, direction: liveSort.direction === 'asc' ? 'desc' : 'asc' };
+    updateSortIndicators();
+    renderLiveTasks(lastLiveTasks);
+  });
+
+  const narrowViewport = window.matchMedia('(max-width: 640px)');
+  const updateHeaderSortTabStops = () => {
+    for (const button of el.sortButtons) button.tabIndex = narrowViewport.matches ? -1 : 0;
+  };
+  narrowViewport.addEventListener('change', updateHeaderSortTabStops);
+  updateHeaderSortTabStops();
+  updateSortIndicators();
+}
+
 function renderLiveTasks(tasks) {
   clearChildren(el.liveBody);
   el.liveEmpty.hidden = tasks.length > 0;
   const now = Date.now();
-  for (const task of tasks) {
+  for (const task of sortLiveTasks(tasks)) {
     const row = document.createElement('tr');
     row.className = 'live-row';
     row.append(
@@ -121,9 +266,9 @@ function renderLiveTasks(tasks) {
   }
 }
 
-function fieldRow(labelText, value) {
+function fieldRow(labelText, value, emphasize = false) {
   const p = document.createElement('p');
-  p.className = 'field-line';
+  p.className = emphasize ? 'field-line field-line-emphasis' : 'field-line';
   const label = document.createElement('span');
   label.className = 'field-label';
   label.textContent = labelText;
@@ -134,31 +279,38 @@ function fieldRow(labelText, value) {
   return p;
 }
 
-function attentionCard(kickerText, kickerClass, item) {
+function attentionRow(kickerText, kickerClass, item) {
   const li = document.createElement('li');
-  li.className = `card ${kickerClass}`;
-  const kicker = document.createElement('p');
-  kicker.className = 'card-kicker';
+  li.className = `attn-row ${kickerClass}`;
+  const primary = document.createElement('div');
+  primary.className = 'attn-row-primary';
+  const kicker = document.createElement('span');
+  kicker.className = 'attn-row-kicker';
   kicker.textContent = kickerText;
-  const heading = document.createElement('h4');
-  heading.className = 'card-title';
+  const heading = document.createElement('h3');
+  heading.className = 'attn-row-title';
   heading.textContent = taskLabel(item);
-  const meta = document.createElement('p');
-  meta.className = 'card-meta';
+  const meta = document.createElement('span');
+  meta.className = 'attn-row-meta';
   meta.textContent = `${item.provider} · ${item.project}`;
-  li.append(kicker, heading, meta);
-  return li;
+  primary.append(kicker, heading, meta);
+
+  const detail = document.createElement('div');
+  detail.className = 'attn-row-detail';
+
+  li.append(primary, detail);
+  return { li, detail };
 }
 
 function renderBlockers(blockers) {
   clearChildren(el.blockersList);
   el.blockersEmpty.hidden = blockers.length > 0;
   for (const blocker of blockers) {
-    const li = attentionCard('Blocker', 'card-blocker', blocker);
-    li.append(
+    const { li, detail } = attentionRow('Blocker', 'attn-row-blocker', blocker);
+    detail.append(
       fieldRow('Cause:', blocker.blocker.cause),
       fieldRow('Owner:', blocker.blocker.owner),
-      fieldRow('Next action:', blocker.blocker.nextAction),
+      fieldRow('Next action:', blocker.blocker.nextAction, true),
       fieldRow('Age:', formatElapsed(Date.now() - new Date(blocker.lastUpdateAt).getTime())),
     );
     el.blockersList.append(li);
@@ -169,10 +321,10 @@ function renderQuestions(questions) {
   clearChildren(el.questionsList);
   el.questionsEmpty.hidden = questions.length > 0;
   for (const question of questions) {
-    const li = attentionCard('Question', 'card-question', question);
-    li.append(
+    const { li, detail } = attentionRow('Question', 'attn-row-question', question);
+    detail.append(
       fieldRow('Question:', question.question.question),
-      fieldRow('Requested action:', question.question.requestedAction),
+      fieldRow('Requested action:', question.question.requestedAction, true),
     );
     el.questionsList.append(li);
   }
@@ -253,7 +405,15 @@ function renderTimeline(timeline) {
       body.className = 'timeline-body';
       const time = document.createElement('span');
       time.className = 'timeline-time';
-      time.textContent = formatTime(entry.timestamp);
+      const timePrimary = document.createElement('time');
+      timePrimary.className = 'timeline-time-primary';
+      const entryDate = new Date(entry.timestamp);
+      if (!Number.isNaN(entryDate.getTime())) timePrimary.dateTime = entryDate.toISOString();
+      timePrimary.textContent = formatClockTime(entry.timestamp);
+      const timeFull = document.createElement('span');
+      timeFull.className = 'timeline-time-full';
+      timeFull.textContent = formatTime(entry.timestamp);
+      time.append(timePrimary, timeFull);
       const badge = stateChip(entry.state);
       const desc = document.createElement('span');
       desc.className = 'timeline-desc';
@@ -278,10 +438,101 @@ function renderSummary(status) {
   el.summaryCompleted.textContent = String((status.completed ?? []).length);
 }
 
+function filterCount(status, filter) {
+  return filter === 'all' ? 0 : (status?.[filter] ?? []).length;
+}
+
+function applyDashboardFilter() {
+  for (const [filter, config] of Object.entries(DASHBOARD_FILTERS)) {
+    el[config.section].hidden = dashboardFilter !== 'all' && dashboardFilter !== filter;
+  }
+  el.timelineSection.hidden = dashboardFilter !== 'all';
+
+  el.summaryFilterAll.setAttribute('aria-pressed', String(dashboardFilter === 'all'));
+  for (const button of el.summaryFilterButtons) {
+    button.setAttribute('aria-pressed', String(button.dataset.filter === dashboardFilter));
+  }
+
+  if (dashboardFilter === 'all') {
+    el.summaryFilterStatus.textContent = 'Showing all activity.';
+    return;
+  }
+  const config = DASHBOARD_FILTERS[dashboardFilter];
+  const count = filterCount(lastStatus, dashboardFilter);
+  const label = count === 1 ? config.singular : config.plural;
+  el.summaryFilterStatus.textContent = `Showing ${count} ${label}. Select View all to restore every section.`;
+}
+
+function setDashboardFilter(filter) {
+  if (filter !== 'all' && !Object.hasOwn(DASHBOARD_FILTERS, filter)) return;
+  dashboardFilter = filter;
+  applyDashboardFilter();
+}
+
+function initDashboardFilters() {
+  el.summaryFilterAll.addEventListener('click', () => setDashboardFilter('all'));
+  for (const button of el.summaryFilterButtons) {
+    button.addEventListener('click', () => setDashboardFilter(button.dataset.filter));
+  }
+  applyDashboardFilter();
+}
+
 function setBanner(message, isError) {
   el.banner.textContent = message;
   el.banner.classList.toggle('status-banner-error', Boolean(isError));
   el.liveDot.classList.toggle('live-dot-error', Boolean(isError));
+}
+
+function readStoredPreference(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredPreference(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable (private browsing, quota, disabled); preference
+    // simply will not persist across reloads.
+  }
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  for (const button of el.themeSwatches) {
+    button.setAttribute('aria-pressed', String(button.dataset.theme === theme));
+  }
+}
+
+function applyMode(mode) {
+  document.documentElement.dataset.mode = mode;
+  el.modeToggle.setAttribute('aria-pressed', String(mode === 'dark'));
+  el.modeToggleLabel.textContent = mode === 'dark' ? 'Dark mode' : 'Light mode';
+}
+
+function initThemeControls() {
+  const storedTheme = readStoredPreference(THEME_STORAGE_KEY);
+  applyTheme(THEMES.includes(storedTheme) ? storedTheme : DEFAULT_THEME);
+
+  const storedMode = readStoredPreference(MODE_STORAGE_KEY);
+  applyMode(MODES.includes(storedMode) ? storedMode : DEFAULT_MODE);
+
+  for (const button of el.themeSwatches) {
+    button.addEventListener('click', () => {
+      const theme = button.dataset.theme;
+      applyTheme(theme);
+      writeStoredPreference(THEME_STORAGE_KEY, theme);
+    });
+  }
+
+  el.modeToggle.addEventListener('click', () => {
+    const mode = document.documentElement.dataset.mode === 'dark' ? 'light' : 'dark';
+    applyMode(mode);
+    writeStoredPreference(MODE_STORAGE_KEY, mode);
+  });
 }
 
 async function refresh() {
@@ -292,12 +543,15 @@ async function refresh() {
       return;
     }
     const status = await response.json();
+    lastStatus = status;
     renderSummary(status);
-    renderLiveTasks(status.live ?? []);
+    lastLiveTasks = status.live ?? [];
+    renderLiveTasks(lastLiveTasks);
     renderBlockers(status.blockers ?? []);
     renderQuestions(status.questions ?? []);
     renderCompleted(status.completed ?? []);
     renderTimeline(status.timeline ?? []);
+    applyDashboardFilter();
     const generated = formatTime(status.generatedAt);
     const parseErrors = status.parseErrors ?? 0;
     setBanner(
@@ -312,6 +566,9 @@ async function refresh() {
 }
 
 el.refreshButton.addEventListener('click', refresh);
+initThemeControls();
+initLiveSortControls();
+initDashboardFilters();
 
 refresh();
 setInterval(refresh, POLL_INTERVAL_MS);
