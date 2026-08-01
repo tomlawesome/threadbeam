@@ -1,0 +1,17 @@
+{
+  "name": "agent-delivery-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-contained, dependency-free multi-agent delivery status dashboard for trusted developer networks.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "emit": "node bin/emit.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Delivery Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="page-header">
+    <h1>Agent Delivery Dashboard</h1>
+    <p class="subtitle">Local, read-only view of in-flight agent tasks.</p>
+    <button id="refresh-button" type="button">Refresh now</button>
+  </header>
+
+  <main>
+    <p id="status-banner" class="status-banner" role="status" aria-live="polite"></p>
+
+    <section aria-labelledby="live-tasks-heading">
+      <h2 id="live-tasks-heading">Live tasks</h2>
+      <table id="live-tasks-table">
+        <caption class="visually-hidden">Currently active agent tasks</caption>
+        <thead>
+          <tr>
+            <th scope="col">Provider / model</th>
+            <th scope="col">Task</th>
+            <th scope="col">Project</th>
+            <th scope="col">Branch / worktree</th>
+            <th scope="col">State</th>
+            <th scope="col">Started</th>
+            <th scope="col">Elapsed</th>
+            <th scope="col">Last update</th>
+          </tr>
+        </thead>
+        <tbody id="live-tasks-body"></tbody>
+      </table>
+      <p id="live-tasks-empty" class="empty-state" hidden>No live tasks.</p>
+    </section>
+
+    <section aria-labelledby="blockers-heading">
+      <h2 id="blockers-heading">Blockers</h2>
+      <ul id="blockers-list" class="card-list"></ul>
+      <p id="blockers-empty" class="empty-state" hidden>No blockers.</p>
+    </section>
+
+    <section aria-labelledby="questions-heading">
+      <h2 id="questions-heading">Questions</h2>
+      <ul id="questions-list" class="card-list"></ul>
+      <p id="questions-empty" class="empty-state" hidden>No open questions.</p>
+    </section>
+
+    <section aria-labelledby="completed-heading">
+      <h2 id="completed-heading">Completed history</h2>
+      <ul id="completed-list" class="card-list"></ul>
+      <p id="completed-empty" class="empty-state" hidden>No completed tasks yet.</p>
+    </section>
+
+    <section aria-labelledby="timeline-heading">
+      <h2 id="timeline-heading">Timeline</h2>
+      <ol id="timeline-list" class="timeline"></ol>
+      <p id="timeline-empty" class="empty-state" hidden>No events yet.</p>
+    </section>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
