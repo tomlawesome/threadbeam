@@ -8,7 +8,7 @@ import { validateEvent, SCHEMA_VERSION } from '../lib/contract.mjs';
 import { appendEvent, eventsFilePath } from '../lib/store.mjs';
 
 async function makeTempDir() {
-  return fsp.mkdtemp(path.join(os.tmpdir(), 'agent-dashboard-privacy-test-'));
+  return fsp.mkdtemp(path.join(os.tmpdir(), 'threadbeam-privacy-test-'));
 }
 
 function baseEvent(overrides = {}) {
@@ -17,10 +17,10 @@ function baseEvent(overrides = {}) {
     provider: 'claude',
     repo: 'example/project',
     project: 'example-project',
-    taskId: 'issue-175',
+    taskId: 'issue-42',
     model: 'claude-sonnet-5',
-    branch: 'codex/issue-175-agent-dashboard',
-    worktree: 'issue-175-claude',
+    branch: 'agent/issue-42-delivery-view',
+    worktree: 'issue-42-implementation',
     timestamp: '2026-08-01T12:00:00Z',
     state: 'implementing',
     ...overrides,

@@ -7,7 +7,7 @@ import fsp from 'node:fs/promises';
 import { startServer } from '../server.mjs';
 
 async function makeTempDir() {
-  return fsp.mkdtemp(path.join(os.tmpdir(), 'agent-dashboard-server-test-'));
+  return fsp.mkdtemp(path.join(os.tmpdir(), 'threadbeam-server-test-'));
 }
 
 async function withServer(t, fn) {
@@ -91,7 +91,7 @@ test('GET / serves the static index page', async (t) => {
     const res = await request(port, { path: '/' });
     assert.equal(res.statusCode, 200);
     assert.match(res.headers['content-type'], /text\/html/);
-    assert.match(res.body, /Agent Delivery Dashboard/);
+    assert.match(res.body, /Threadbeam/);
   });
 });
 

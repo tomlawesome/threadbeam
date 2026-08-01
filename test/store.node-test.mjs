@@ -3,12 +3,19 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import fsp from 'node:fs/promises';
-import { appendEvent, readEvents, deriveStatus, eventsFilePath, ensureStoreDir } from '../lib/store.mjs';
+import {
+  appendEvent,
+  readEvents,
+  deriveStatus,
+  eventsFilePath,
+  ensureStoreDir,
+  defaultStoreDir,
+} from '../lib/store.mjs';
 import { validateEvent, SCHEMA_VERSION } from '../lib/contract.mjs';
 import { run as emit } from '../bin/emit.mjs';
 
 async function makeTempDir() {
-  return fsp.mkdtemp(path.join(os.tmpdir(), 'agent-dashboard-test-'));
+  return fsp.mkdtemp(path.join(os.tmpdir(), 'threadbeam-test-'));
 }
 
 function baseEvent(overrides = {}) {
@@ -17,17 +24,22 @@ function baseEvent(overrides = {}) {
     provider: 'claude',
     repo: 'example/project',
     project: 'example-project',
-    taskId: 'issue-175',
-    issueNumber: 175,
-    title: 'Agent delivery dashboard',
+    taskId: 'issue-42',
+    issueNumber: 42,
+    title: 'Improve the delivery view',
     model: 'claude-sonnet-5',
-    branch: 'codex/issue-175-agent-dashboard',
-    worktree: 'issue-175-claude',
+    branch: 'agent/issue-42-delivery-view',
+    worktree: 'issue-42-implementation',
     timestamp: '2026-08-01T12:00:00Z',
     state: 'implementing',
     ...overrides,
   }).value;
 }
+
+test('defaultStoreDir uses Threadbeam naming and honours its explicit override', () => {
+  assert.equal(defaultStoreDir({}), path.join(os.homedir(), '.threadbeam'));
+  assert.equal(defaultStoreDir({ THREADBEAM_STORE_DIR: '/tmp/threadbeam-events' }), '/tmp/threadbeam-events');
+});
 
 test('appendEvent then readEvents round-trips a valid event', async () => {
   const dir = await makeTempDir();
@@ -67,7 +79,7 @@ test('valid JSON that violates the event contract is skipped and counted', async
   const { events, parseErrors } = await readEvents(dir);
   assert.equal(parseErrors, 1);
   assert.equal(events.length, 1);
-  assert.equal(events[0].taskId, 'issue-175');
+  assert.equal(events[0].taskId, 'issue-42');
 });
 
 test('appendEvent refuses to follow a symlinked events file', async () => {
@@ -219,8 +231,8 @@ test('absence of any event is never reported as a live or completed task', () =>
 test('the same task identifier in different repositories remains distinct', () => {
   const now = Date.parse('2026-08-01T12:05:00Z');
   const status = deriveStatus([
-    baseEvent({ repo: 'example/project', taskId: 'issue-175' }),
-    baseEvent({ repo: 'example/another-project', taskId: 'issue-175' }),
+    baseEvent({ repo: 'example/project', taskId: 'issue-42' }),
+    baseEvent({ repo: 'example/another-project', taskId: 'issue-42' }),
   ], { now, staleMs: 60 * 60 * 1000 });
 
   assert.equal(status.live.length, 2);
@@ -237,10 +249,10 @@ test('emit() validates and appends a stdin-shaped event, rejecting invalid ones'
     provider: 'claude',
     repo: 'example/project',
     project: 'example-project',
-    taskId: 'issue-175',
+    taskId: 'issue-42',
     model: 'claude-sonnet-5',
-    branch: 'codex/issue-175-agent-dashboard',
-    worktree: 'issue-175-claude',
+    branch: 'agent/issue-42-delivery-view',
+    worktree: 'issue-42-implementation',
     timestamp: '2026-08-01T12:00:00Z',
     state: 'queued',
   });

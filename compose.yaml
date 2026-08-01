@@ -1,0 +1,40 @@
+name: threadbeam
+
+services:
+  threadbeam:
+    build:
+      context: .
+    image: threadbeam:local
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5
+    environment:
+      THREADBEAM_HOST: 0.0.0.0
+      THREADBEAM_PORT: 4317
+      THREADBEAM_STORE_DIR: /data
+    ports:
+      - "${THREADBEAM_PUBLISH_ADDRESS:-127.0.0.1}:${THREADBEAM_PUBLISH_PORT:-4317}:4317"
+    volumes:
+      - threadbeam-data:/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4317/api/status').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  threadbeam-data:

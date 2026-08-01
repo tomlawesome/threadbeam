@@ -3,8 +3,8 @@
 const POLL_INTERVAL_MS = 5000;
 const KNOWN_PROVIDERS = ['codex', 'claude', 'mistral', 'ollama', 'luna'];
 
-const THEME_STORAGE_KEY = 'agent-dashboard:theme';
-const MODE_STORAGE_KEY = 'agent-dashboard:mode';
+const THEME_STORAGE_KEY = 'threadbeam:theme';
+const MODE_STORAGE_KEY = 'threadbeam:mode';
 const THEMES = ['ocean', 'violet', 'amber', 'emerald', 'rose'];
 const DEFAULT_THEME = 'ocean';
 const MODES = ['dark', 'light'];

@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+data/
+.threadbeam/
+.env
+*.log
+.DS_Store

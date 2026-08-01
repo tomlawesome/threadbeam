@@ -147,16 +147,16 @@ function isMain() {
 }
 
 if (isMain()) {
-  const port = Number(process.env.AGENT_DASHBOARD_PORT ?? 4317);
-  const host = process.env.AGENT_DASHBOARD_HOST ?? DEFAULT_HOST;
+  const port = Number(process.env.THREADBEAM_PORT ?? 4317);
+  const host = process.env.THREADBEAM_HOST ?? DEFAULT_HOST;
   startServer({ host, port })
     .then((server) => {
       const address = server.address();
       const displayHost = address.address.includes(':') ? `[${address.address}]` : address.address;
-      console.log(`agent-dashboard listening on http://${displayHost}:${address.port}`);
+      console.log(`threadbeam listening on http://${displayHost}:${address.port}`);
     })
     .catch((error) => {
-      process.stderr.write(`agent-dashboard: ${error.message}\n`);
+      process.stderr.write(`threadbeam: ${error.message}\n`);
       process.exitCode = 1;
     });
 }

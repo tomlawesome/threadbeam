@@ -59,14 +59,14 @@ if (isMain()) {
   run()
     .then((result) => {
       if (!result.ok) {
-        process.stderr.write(`agent-dashboard emit: rejected event\n${result.errors.join('\n')}\n`);
+        process.stderr.write(`threadbeam emit: rejected event\n${result.errors.join('\n')}\n`);
         process.exitCode = 1;
         return;
       }
       process.stdout.write('accepted\n');
     })
     .catch((err) => {
-      process.stderr.write(`agent-dashboard emit: ${err.message}\n`);
+      process.stderr.write(`threadbeam emit: ${err.message}\n`);
       process.exitCode = 1;
     });
 }
