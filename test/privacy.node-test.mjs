@@ -129,7 +129,25 @@ test('validated events never carry more than the closed field set', async () => 
 test('the UI renders status through textContent and includes blocker age and repository identity', async () => {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
   const app = await fsp.readFile(path.join(root, 'public', 'app.js'), 'utf8');
-  assert.doesNotMatch(app, /innerHTML/u);
+  assert.doesNotMatch(app, /innerHTML|outerHTML|document\.write|insertAdjacentHTML/u);
   assert.match(app, /Age:/u);
   assert.match(app, /task\.repo/u);
+});
+
+test('the UI renders every required blocker and question field label', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const app = await fsp.readFile(path.join(root, 'public', 'app.js'), 'utf8');
+  for (const label of ['Cause:', 'Owner:', 'Next action:', 'Question:', 'Requested action:']) {
+    assert.match(app, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+  }
+});
+
+test('the dashboard references no external assets, fonts or remote resources', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const files = ['index.html', 'app.js', 'styles.css'];
+  for (const file of files) {
+    const content = await fsp.readFile(path.join(root, 'public', file), 'utf8');
+    assert.doesNotMatch(content, /https?:\/\//u, `${file} must not reference remote resources`);
+    assert.doesNotMatch(content, /@import/u, `${file} must not import external stylesheets`);
+  }
 });

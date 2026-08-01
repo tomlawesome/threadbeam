@@ -7,60 +7,89 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="page-header">
-    <h1>Agent Delivery Dashboard</h1>
-    <p class="subtitle">Local, read-only view of in-flight agent tasks.</p>
-    <button id="refresh-button" type="button">Refresh now</button>
-  </header>
+  <div class="dashboard">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <h1>Agent Delivery Dashboard</h1>
+        <p class="subtitle">Local, read-only view of in-flight agent tasks.</p>
+      </div>
+      <div class="topbar-status">
+        <span id="live-dot" class="live-dot" aria-hidden="true"></span>
+        <p id="status-banner" class="status-banner" role="status" aria-live="polite"></p>
+        <button id="refresh-button" type="button">Refresh now</button>
+      </div>
+    </header>
 
-  <main>
-    <p id="status-banner" class="status-banner" role="status" aria-live="polite"></p>
+    <main>
+      <section class="summary-strip" aria-label="Status summary">
+        <div class="stat">
+          <p class="stat-value" id="summary-active">0</p>
+          <p class="stat-label">Active tasks</p>
+        </div>
+        <div class="stat stat-blockers">
+          <p class="stat-value" id="summary-blockers">0</p>
+          <p class="stat-label">Blockers</p>
+        </div>
+        <div class="stat stat-questions">
+          <p class="stat-value" id="summary-questions">0</p>
+          <p class="stat-label">Open questions</p>
+        </div>
+        <div class="stat">
+          <p class="stat-value" id="summary-completed">0</p>
+          <p class="stat-label">Recently completed</p>
+        </div>
+      </section>
 
-    <section aria-labelledby="live-tasks-heading">
-      <h2 id="live-tasks-heading">Live tasks</h2>
-      <table id="live-tasks-table">
-        <caption class="visually-hidden">Currently active agent tasks</caption>
-        <thead>
-          <tr>
-            <th scope="col">Provider / model</th>
-            <th scope="col">Task</th>
-            <th scope="col">Project</th>
-            <th scope="col">Branch / worktree</th>
-            <th scope="col">State</th>
-            <th scope="col">Started</th>
-            <th scope="col">Elapsed</th>
-            <th scope="col">Last update</th>
-          </tr>
-        </thead>
-        <tbody id="live-tasks-body"></tbody>
-      </table>
-      <p id="live-tasks-empty" class="empty-state" hidden>No live tasks.</p>
-    </section>
+      <section aria-labelledby="live-tasks-heading">
+        <h2 id="live-tasks-heading">Live tasks</h2>
+        <table id="live-tasks-table">
+          <caption class="visually-hidden">Currently active agent tasks</caption>
+          <thead>
+            <tr>
+              <th scope="col">Provider / model</th>
+              <th scope="col">Task</th>
+              <th scope="col">Project</th>
+              <th scope="col">Branch / worktree</th>
+              <th scope="col">State</th>
+              <th scope="col">Started</th>
+              <th scope="col">Elapsed</th>
+              <th scope="col">Last update</th>
+            </tr>
+          </thead>
+          <tbody id="live-tasks-body"></tbody>
+        </table>
+        <p id="live-tasks-empty" class="empty-state" hidden>No live tasks.</p>
+      </section>
 
-    <section aria-labelledby="blockers-heading">
-      <h2 id="blockers-heading">Blockers</h2>
-      <ul id="blockers-list" class="card-list"></ul>
-      <p id="blockers-empty" class="empty-state" hidden>No blockers.</p>
-    </section>
+      <section aria-labelledby="attention-heading">
+        <h2 id="attention-heading">Attention</h2>
+        <div class="attention-groups">
+          <div class="attention-group" role="group" aria-labelledby="blockers-heading">
+            <h3 id="blockers-heading">Blockers</h3>
+            <ul id="blockers-list" class="card-list"></ul>
+            <p id="blockers-empty" class="empty-state" hidden>No blockers.</p>
+          </div>
+          <div class="attention-group" role="group" aria-labelledby="questions-heading">
+            <h3 id="questions-heading">Questions</h3>
+            <ul id="questions-list" class="card-list"></ul>
+            <p id="questions-empty" class="empty-state" hidden>No open questions.</p>
+          </div>
+        </div>
+      </section>
 
-    <section aria-labelledby="questions-heading">
-      <h2 id="questions-heading">Questions</h2>
-      <ul id="questions-list" class="card-list"></ul>
-      <p id="questions-empty" class="empty-state" hidden>No open questions.</p>
-    </section>
+      <section aria-labelledby="completed-heading">
+        <h2 id="completed-heading">Completed history</h2>
+        <ul id="completed-list" class="feed-list"></ul>
+        <p id="completed-empty" class="empty-state" hidden>No completed tasks yet.</p>
+      </section>
 
-    <section aria-labelledby="completed-heading">
-      <h2 id="completed-heading">Completed history</h2>
-      <ul id="completed-list" class="card-list"></ul>
-      <p id="completed-empty" class="empty-state" hidden>No completed tasks yet.</p>
-    </section>
-
-    <section aria-labelledby="timeline-heading">
-      <h2 id="timeline-heading">Timeline</h2>
-      <ol id="timeline-list" class="timeline"></ol>
-      <p id="timeline-empty" class="empty-state" hidden>No events yet.</p>
-    </section>
-  </main>
+      <section aria-labelledby="timeline-heading">
+        <h2 id="timeline-heading">Timeline</h2>
+        <div id="timeline-list" class="timeline"></div>
+        <p id="timeline-empty" class="empty-state" hidden>No events yet.</p>
+      </section>
+    </main>
+  </div>
 
   <script src="/app.js" defer></script>
 </body>
