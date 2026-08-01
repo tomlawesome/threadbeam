@@ -122,7 +122,7 @@ slice only provides the contract, storage, server, UI and emitter.
 ## Tests
 
 ```
-node --test tools/agent-dashboard/test/*.test.mjs
+node --test tools/agent-dashboard/test/*.node-test.mjs
 ```
 
 Tests cover contract rejection (unknown fields, malformed values, secret-
