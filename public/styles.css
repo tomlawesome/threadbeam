@@ -455,16 +455,63 @@ th[aria-sort="descending"] .sort-button::after {
   background: var(--surface);
 }
 
-.provider-model {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+#live-tasks-table {
+  table-layout: fixed;
 }
 
-.model-name {
+#live-tasks-table col.col-provider {
+  width: 8%;
+}
+
+#live-tasks-table col.col-model {
+  width: 9%;
+}
+
+#live-tasks-table col.col-task {
+  width: 32%;
+}
+
+#live-tasks-table col.col-project {
+  width: 12%;
+}
+
+#live-tasks-table col.col-branch {
+  width: 13%;
+}
+
+#live-tasks-table col.col-state {
+  width: 9%;
+}
+
+#live-tasks-table col.col-activity {
+  width: 17%;
+}
+
+#live-tasks-table .live-task-cell {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.activity-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.activity-relative {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.activity-exact {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+}
+
+.activity-started {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .chip {

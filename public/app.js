@@ -28,14 +28,13 @@ const STATE_SORT_ORDER = [
 ];
 
 const LIVE_COLUMNS = [
-  { key: 'provider', type: 'text', get: (t) => `${t.provider} ${t.model}` },
+  { key: 'provider', type: 'text', get: (t) => t.provider },
+  { key: 'model', type: 'text', get: (t) => t.model },
   { key: 'task', type: 'text', get: (t) => taskLabel(t) },
-  { key: 'project', type: 'text', get: (t) => `${t.repo} / ${t.project}` },
+  { key: 'project', type: 'text', get: (t) => projectDisplay(t) },
   { key: 'branch', type: 'text', get: (t) => `${t.branch} (${t.worktree})` },
   { key: 'state', type: 'state', get: (t) => t.state },
-  { key: 'started', type: 'timestamp', get: (t) => new Date(t.startedAt).getTime() },
-  { key: 'elapsed', type: 'elapsed', get: (t) => Date.now() - new Date(t.startedAt).getTime() },
-  { key: 'lastUpdate', type: 'timestamp', get: (t) => new Date(t.lastUpdateAt).getTime() },
+  { key: 'activity', type: 'timestamp', get: (t) => new Date(t.lastUpdateAt).getTime() },
 ];
 
 let liveSort = { key: null, direction: 'asc' };
@@ -43,7 +42,7 @@ let lastLiveTasks = [];
 let lastStatus = null;
 let dashboardFilter = 'all';
 
-const el = {
+const el = typeof document === 'undefined' ? {} : {
   liveDot: document.getElementById('live-dot'),
   banner: document.getElementById('status-banner'),
   summaryActive: document.getElementById('summary-active'),
@@ -113,6 +112,31 @@ function taskLabel(task) {
   return task.issueNumber ? `#${task.issueNumber} — ${task.title || 'untitled'}` : task.title || task.taskId;
 }
 
+function lastPathSegment(value) {
+  if (typeof value !== 'string') return '';
+  const segments = value.split('/').filter((segment) => segment.length > 0);
+  return segments.length > 0 ? segments[segments.length - 1] : '';
+}
+
+function projectDisplay(task) {
+  return lastPathSegment(task.project) || lastPathSegment(task.repo);
+}
+
+function relativeLastUpdate(lastUpdateAt, now) {
+  const ms = new Date(lastUpdateAt).getTime();
+  if (!Number.isFinite(ms)) return '—';
+  const diffMs = now - ms;
+  if (diffMs < 1000) return 'now';
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 function clearChildren(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
@@ -129,18 +153,57 @@ function cell(label, text) {
   return td;
 }
 
-function providerModelCell(task) {
+function providerCell(task) {
   const td = document.createElement('td');
-  td.dataset.label = 'Provider / model';
-  const wrap = document.createElement('span');
-  wrap.className = 'provider-model';
-  const providerChip = document.createElement('span');
-  providerChip.className = providerChipClass(task.provider);
-  providerChip.textContent = task.provider;
-  const model = document.createElement('span');
-  model.className = 'model-name';
-  model.textContent = task.model;
-  wrap.append(providerChip, model);
+  td.dataset.label = 'Provider';
+  const chip = document.createElement('span');
+  chip.className = providerChipClass(task.provider);
+  chip.textContent = task.provider;
+  td.append(chip);
+  return td;
+}
+
+function modelCell(task) {
+  const td = document.createElement('td');
+  td.dataset.label = 'Model';
+  td.textContent = task.model ?? '—';
+  return td;
+}
+
+function projectCell(task) {
+  const td = document.createElement('td');
+  td.dataset.label = 'Project';
+  td.textContent = projectDisplay(task) || '—';
+  if (task.repo) td.title = task.repo;
+  return td;
+}
+
+function activityCell(task, now) {
+  const td = document.createElement('td');
+  td.dataset.label = 'Activity';
+  const wrap = document.createElement('div');
+  wrap.className = 'activity-cell';
+
+  const lastUpdateMs = new Date(task.lastUpdateAt).getTime();
+  const relative = document.createElement('time');
+  relative.className = 'activity-relative';
+  if (Number.isFinite(lastUpdateMs)) relative.dateTime = new Date(lastUpdateMs).toISOString();
+  relative.textContent = relativeLastUpdate(task.lastUpdateAt, now);
+
+  const exact = document.createElement('time');
+  exact.className = 'activity-exact';
+  if (Number.isFinite(lastUpdateMs)) exact.dateTime = new Date(lastUpdateMs).toISOString();
+  exact.textContent = formatTime(task.lastUpdateAt);
+
+  const startedMs = new Date(task.startedAt).getTime();
+  const started = document.createElement('p');
+  started.className = 'activity-started';
+  const startedTime = document.createElement('time');
+  if (Number.isFinite(startedMs)) startedTime.dateTime = new Date(startedMs).toISOString();
+  startedTime.textContent = formatTime(task.startedAt);
+  started.append('Started ', startedTime, ` · ${formatElapsed(now - startedMs)} elapsed`);
+
+  wrap.append(relative, exact, started);
   td.append(wrap);
   return td;
 }
@@ -252,15 +315,16 @@ function renderLiveTasks(tasks) {
   for (const task of sortLiveTasks(tasks)) {
     const row = document.createElement('tr');
     row.className = 'live-row';
+    const taskCell = cell('Task', taskLabel(task));
+    taskCell.classList.add('live-task-cell');
     row.append(
-      providerModelCell(task),
-      cell('Task', taskLabel(task)),
-      cell('Project', `${task.repo} / ${task.project}`),
+      providerCell(task),
+      modelCell(task),
+      taskCell,
+      projectCell(task),
       cell('Branch / worktree', `${task.branch} (${task.worktree})`),
       stateCell(task.state),
-      cell('Started', formatTime(task.startedAt)),
-      cell('Elapsed', formatElapsed(now - new Date(task.startedAt).getTime())),
-      cell('Last update', formatTime(task.lastUpdateAt)),
+      activityCell(task, now),
     );
     el.liveBody.append(row);
   }
@@ -565,10 +629,23 @@ async function refresh() {
   }
 }
 
-el.refreshButton.addEventListener('click', refresh);
-initThemeControls();
-initLiveSortControls();
-initDashboardFilters();
+if (typeof document !== 'undefined') {
+  el.refreshButton.addEventListener('click', refresh);
+  initThemeControls();
+  initLiveSortControls();
+  initDashboardFilters();
 
-refresh();
-setInterval(refresh, POLL_INTERVAL_MS);
+  refresh();
+  setInterval(refresh, POLL_INTERVAL_MS);
+}
+
+export {
+  formatElapsed,
+  formatTime,
+  taskLabel,
+  providerChipClass,
+  lastPathSegment,
+  projectDisplay,
+  relativeLastUpdate,
+  LIVE_COLUMNS,
+};
