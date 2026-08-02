@@ -6,6 +6,7 @@ import fsp from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { validateEvent, SCHEMA_VERSION } from '../lib/contract.mjs';
 import { appendEvent, eventsFilePath } from '../lib/store.mjs';
+import { lastPathSegment, projectDisplay, relativeLastUpdate } from '../public/app.js';
 
 async function makeTempDir() {
   return fsp.mkdtemp(path.join(os.tmpdir(), 'threadbeam-privacy-test-'));
@@ -211,12 +212,100 @@ test('summary counters are accessible filters with an explicit all-activity rese
   assert.match(app, /Select View all to restore every section\./u);
 });
 
-test('every live-task column header is a keyboard-operable, aria-sort-annotated control', async () => {
+test('every live-task column header is a keyboard-operable, aria-sort-annotated control exposing the seven logical sort keys in order', async () => {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
   const html = await fsp.readFile(path.join(root, 'public', 'index.html'), 'utf8');
   const headerCells = [...html.matchAll(/<th scope="col" aria-sort="none">\s*<button type="button" class="sort-button" data-sort-key="([a-zA-Z]+)">/gu)];
   const keys = headerCells.map((m) => m[1]);
-  assert.deepEqual(keys, ['provider', 'task', 'project', 'branch', 'state', 'started', 'elapsed', 'lastUpdate']);
+  assert.deepEqual(keys, ['provider', 'model', 'task', 'project', 'branch', 'state', 'activity']);
+});
+
+test('the mobile live-task sort select exposes the same seven logical keys in the same order', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const html = await fsp.readFile(path.join(root, 'public', 'index.html'), 'utf8');
+  const select = html.match(/<select id="mobile-sort-key">([\s\S]*?)<\/select>/u)[1];
+  const optionValues = [...select.matchAll(/<option value="([a-zA-Z]*)"/gu)].map((m) => m[1]);
+  assert.deepEqual(optionValues, ['', 'provider', 'model', 'task', 'project', 'branch', 'state', 'activity']);
+});
+
+test('provider and model render as separate cells and neither value is duplicated', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const app = await fsp.readFile(path.join(root, 'public', 'app.js'), 'utf8');
+  assert.doesNotMatch(app, /providerModelCell/u);
+  const providerFn = app.match(/function providerCell\(task\) \{([\s\S]*?)\n\}/u)[1];
+  const modelFn = app.match(/function modelCell\(task\) \{([\s\S]*?)\n\}/u)[1];
+  assert.match(providerFn, /task\.provider/u);
+  assert.doesNotMatch(providerFn, /task\.model/u);
+  assert.match(modelFn, /task\.model/u);
+  assert.doesNotMatch(modelFn, /task\.provider/u);
+  assert.match(app, /providerCell\(task\),\s*modelCell\(task\),/u);
+});
+
+test('lastPathSegment returns the final non-empty path segment', () => {
+  assert.equal(lastPathSegment('foo/bar/baz'), 'baz');
+  assert.equal(lastPathSegment('foo/bar/'), 'bar');
+  assert.equal(lastPathSegment(''), '');
+  assert.equal(lastPathSegment('///'), '');
+  assert.equal(lastPathSegment(undefined), '');
+});
+
+test('projectDisplay uses the final segment of task.project, falling back to task.repo', () => {
+  assert.equal(projectDisplay({ project: 'a/b/example-project', repo: 'org/example' }), 'example-project');
+  assert.equal(projectDisplay({ project: '', repo: 'org/example-repo' }), 'example-repo');
+  assert.equal(projectDisplay({ project: undefined, repo: 'org/example-repo' }), 'example-repo');
+  assert.equal(projectDisplay({ project: undefined, repo: undefined }), '');
+});
+
+test('the project cell tooltip is exactly the accepted repo value with no composed identity', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const app = await fsp.readFile(path.join(root, 'public', 'app.js'), 'utf8');
+  assert.match(app, /if \(task\.repo\) td\.title = task\.repo;/u);
+});
+
+test('relativeLastUpdate renders now, seconds, minutes, hours, days and an em dash for invalid input, never NaN', () => {
+  const now = Date.parse('2026-08-02T12:00:00Z');
+  assert.equal(relativeLastUpdate('2026-08-02T12:00:00Z', now), 'now');
+  assert.equal(relativeLastUpdate('2026-08-02T11:59:59Z', now), '1s ago');
+  assert.equal(relativeLastUpdate('2026-08-02T11:55:00Z', now), '5m ago');
+  assert.equal(relativeLastUpdate('2026-08-02T09:00:00Z', now), '3h ago');
+  assert.equal(relativeLastUpdate('2026-07-30T12:00:00Z', now), '3d ago');
+  assert.equal(relativeLastUpdate('2026-08-02T12:05:00Z', now), 'now');
+  assert.equal(relativeLastUpdate('not-a-date', now), '—');
+  assert.equal(relativeLastUpdate(undefined, now), '—');
+  assert.doesNotMatch(relativeLastUpdate('not-a-date', now), /NaN/u);
+});
+
+test('the activity cell renders a prominent relative time, exact time and a subdued started/elapsed line with semantic time elements', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const app = await fsp.readFile(path.join(root, 'public', 'app.js'), 'utf8');
+  assert.match(app, /activity-relative/u);
+  assert.match(app, /activity-exact/u);
+  assert.match(app, /activity-started/u);
+  assert.match(app, /createElement\('time'\)/u);
+  assert.match(app, /'Started '/u);
+  assert.match(app, /elapsed`/u);
+});
+
+test('#live-tasks-table scopes a fixed layout with a coherent width allocation where Task is substantially the largest', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const css = await fsp.readFile(path.join(root, 'public', 'styles.css'), 'utf8');
+  assert.match(css, /#live-tasks-table\s*\{[^}]*table-layout:\s*fixed/u);
+  const widthEntries = [...css.matchAll(/#live-tasks-table col\.col-([a-z]+)\s*\{\s*width:\s*(\d+(?:\.\d+)?)%;\s*\}/gu)];
+  const widths = Object.fromEntries(widthEntries.map((m) => [m[1], Number(m[2])]));
+  const expectedColumns = ['provider', 'model', 'task', 'project', 'branch', 'state', 'activity'];
+  for (const col of expectedColumns) assert.ok(col in widths, `missing width for ${col}`);
+  const total = Object.values(widths).reduce((sum, value) => sum + value, 0);
+  assert.ok(total <= 100, `total width ${total} exceeds 100%`);
+  const maxOther = Math.max(...expectedColumns.filter((c) => c !== 'task').map((c) => widths[c]));
+  assert.ok(widths.task > maxOther * 1.5, 'task column must be substantially the largest');
+});
+
+test('the live-task Task column wraps long text safely, scoped to #live-tasks-table', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const css = await fsp.readFile(path.join(root, 'public', 'styles.css'), 'utf8');
+  const html = await fsp.readFile(path.join(root, 'public', 'index.html'), 'utf8');
+  assert.match(css, /#live-tasks-table \.live-task-cell\s*\{[^}]*overflow-wrap:\s*anywhere/u);
+  assert.doesNotMatch(html, /style\s*=/iu);
 });
 
 test('mobile live-task sorting remains visible while hidden header controls leave the tab order', async () => {
