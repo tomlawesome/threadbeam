@@ -203,6 +203,32 @@ body {
   filter: none;
 }
 
+.notifications-toggle {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.45rem 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notifications-toggle:hover:not(:disabled) {
+  background: var(--surface-raised);
+  filter: none;
+}
+
+.notifications-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.notifications-toggle:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .live-dot {
   width: 0.6rem;
   height: 0.6rem;
@@ -453,6 +479,11 @@ th[aria-sort="descending"] .sort-button::after {
 
 .live-row:hover {
   background: var(--surface);
+}
+
+.project-breakdown-table th:not(:first-child),
+.project-breakdown-table td:not(:first-child) {
+  text-align: right;
 }
 
 #live-tasks-table {
@@ -828,6 +859,57 @@ th[aria-sort="descending"] .sort-button::after {
 .empty-state {
   color: var(--muted);
   font-style: italic;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.metric-card-header {
+  margin-bottom: 0.15rem;
+}
+
+.metric-card-value {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.metric-card-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-card-detail {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.metric-chip-blockers {
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .visually-hidden {
