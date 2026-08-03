@@ -107,6 +107,12 @@ echo '{...}' | docker compose run --rm -T threadbeam node bin/emit.mjs
 
 Rejected events are never written. Stdin is capped at 16 KiB.
 
+Crafting that JSON by hand isn't required: `adapters/` provides a small CLI
+per maintained bounded-task wrapper (Codex, Claude, Mistral, Ollama, Luna)
+that takes the same fields as flags and emits through this exact stdin path.
+See [docs/adapters.md](docs/adapters.md) for the flag reference and how to
+call one from another repository's own hook script.
+
 ## Event contract
 
 The closed, versioned schema is defined in `lib/contract.mjs`.
