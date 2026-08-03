@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 356 96" width="356" height="96" role="img" aria-labelledby="threadbeam-logo-title threadbeam-logo-desc">
+  <title id="threadbeam-logo-title">Threadbeam</title>
+  <desc id="threadbeam-logo-desc">Four coloured threads converge into a single bright beam beside the Threadbeam wordmark and the line "read-only agent delivery visibility".</desc>
+  <rect x="0.75" y="0.75" width="354.5" height="94.5" rx="18" fill="#111a24" stroke="#33455c" stroke-width="1.5"/>
+  <g transform="translate(12 16)">
+    <g fill="none" stroke-width="3.4" stroke-linecap="round">
+      <path d="M11 12C19 12 28 32 40 32" stroke="#b39cff"/>
+      <path d="M11 22C18 22 27 32 40 32" stroke="#6cb8ff"/>
+      <path d="M11 42C18 42 27 32 40 32" stroke="#53e6c2"/>
+      <path d="M11 52C19 52 28 32 40 32" stroke="#ffb37a"/>
+    </g>
+    <g fill="#6cb8ff" opacity="0.22">
+      <circle cx="40" cy="32" r="7"/>
+      <rect x="43" y="28.6" width="13" height="6.8" rx="3.4"/>
+    </g>
+    <g fill="#eaf4ff">
+      <circle cx="40" cy="32" r="3.6"/>
+      <rect x="43" y="30.2" width="12" height="3.6" rx="1.8"/>
+    </g>
+  </g>
+  <g font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="88" y="52" fill="#f2f5f8" font-size="31" font-weight="600" textLength="172" lengthAdjust="spacingAndGlyphs">Threadbeam</text>
+    <text x="88" y="72" fill="#a9b6c4" font-size="13" textLength="232" lengthAdjust="spacingAndGlyphs">read-only agent delivery visibility</text>
+  </g>
+</svg>
