@@ -97,6 +97,21 @@ for that invocation:
 THREADBEAM_PUBLISH_ADDRESS=192.168.1.20 docker compose up -d --build
 ```
 
+To make this persistent instead of setting the variable on every invocation,
+copy [`.env.example`](.env.example) to `.env` and fill in this host's LAN
+address -- Compose loads `.env` automatically, and it's already gitignored
+so the value stays local to this machine:
+
+```sh
+cp .env.example .env
+# edit .env and set THREADBEAM_PUBLISH_ADDRESS to this host's LAN IP
+docker compose up -d --build
+```
+
+This still uses the default bridge network with a port published to one
+host interface -- it does not put the container on the host network.
+Threadbeam has no login, so only bind it to a network you trust.
+
 ### Prebuilt image
 
 Every push to `main` (release) or `dev` (day-to-day) builds and publishes an
