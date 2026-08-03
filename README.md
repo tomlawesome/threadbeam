@@ -42,8 +42,13 @@ timeline.](docs/assets/threadbeam-dashboard.png)
 
 - a live task table with sortable columns;
 - prominent blockers and questions;
+- a per-project breakdown of active/blocker/question/completed counts, once
+  more than one project is active;
+- delivery metrics: completions and average completion time per provider,
+  and average blocker resolution time;
 - bounded completion history and a timestamp-focused timeline;
 - clickable summary counters with an explicit **View all** reset;
+- opt-in browser notifications for new blockers and questions;
 - five full-page colour themes plus light and dark modes;
 - automatic five-second refresh without remote assets or analytics;
 - a strict stdin-only event emitter and owner-private JSONL store;
@@ -165,6 +170,11 @@ The closed, versioned schema is defined in `lib/contract.mjs`.
 claim it. Unknown fields, malformed types, overlong strings, control
 characters, unsafe paths, invalid timestamps, and secret-shaped values are
 rejected.
+
+"Stale" defaults to 20 minutes since the last event; override it with
+`THREADBEAM_STALE_MINUTES` (a positive whole number of minutes) if your
+agents have a different natural cadence. Unset, non-numeric, or non-positive
+values fall back to the default rather than failing to start.
 
 ## Storage and privacy
 
