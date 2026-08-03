@@ -92,6 +92,21 @@ for that invocation:
 THREADBEAM_PUBLISH_ADDRESS=192.168.1.20 docker compose up -d --build
 ```
 
+### Prebuilt image
+
+Every push to `main` (release) or `dev` (day-to-day) builds and publishes an
+image via GitHub Actions (see `.github/workflows/docker-publish.yml`):
+
+```sh
+docker pull ghcr.io/tomlawesome/threadbeam:latest   # main, released
+docker pull ghcr.io/tomlawesome/threadbeam:dev       # dev, latest build
+```
+
+If `docker pull` reports the image as not found/unauthorized, the GHCR
+package is likely still set to private -- open the package settings on
+GitHub (repo → Packages → threadbeam) and set visibility to public, or
+`docker login ghcr.io` first with a PAT that has `read:packages` scope.
+
 ## Emitting an event
 
 Events are accepted only as one JSON object on stdin. The emitter reads no
@@ -122,6 +137,12 @@ echo '{...}' | docker compose run --rm -T threadbeam node bin/emit.mjs
 ```
 
 Rejected events are never written. Stdin is capped at 16 KiB.
+
+Crafting that JSON by hand isn't required: `adapters/` provides a small CLI
+per maintained bounded-task wrapper (Codex, Claude, Mistral, Ollama, Luna)
+that takes the same fields as flags and emits through this exact stdin path.
+See [docs/adapters.md](docs/adapters.md) for the flag reference and how to
+call one from another repository's own hook script.
 
 ## Event contract
 
