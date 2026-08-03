@@ -1,19 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="threadbeam-mark-title threadbeam-mark-desc">
   <title id="threadbeam-mark-title">Threadbeam</title>
-  <desc id="threadbeam-mark-desc">Four coloured threads converge into a single bright beam on a dark rounded square.</desc>
-  <rect x="1" y="1" width="62" height="62" rx="15" fill="#111a24" stroke="#33455c" stroke-width="2"/>
-  <g fill="none" stroke-width="3.4" stroke-linecap="round">
-    <path d="M11 12C19 12 28 32 40 32" stroke="#b39cff"/>
-    <path d="M11 22C18 22 27 32 40 32" stroke="#6cb8ff"/>
-    <path d="M11 42C18 42 27 32 40 32" stroke="#53e6c2"/>
-    <path d="M11 52C19 52 28 32 40 32" stroke="#ffb37a"/>
+  <desc id="threadbeam-mark-desc">Four bright colored threads converge into a glowing point and fire a beam of light, on a dark rounded square.</desc>
+  <defs>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#bfe4ff"/>
+      <stop offset="100%" stop-color="#6cb8ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beam" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#eaf6ff" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#9fd6ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#6cb8ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3.5"/>
+    </filter>
+  </defs>
+
+  <rect x="1" y="1" width="62" height="62" rx="14" fill="#0a0e14" stroke="#26344a" stroke-width="1.5"/>
+
+  <!-- four threads, sharper angles, thicker, saturated -->
+  <g fill="none" stroke-width="5" stroke-linecap="round" filter="url(#glow)">
+    <path d="M7 8 L38 30" stroke="#a06bff"/>
+    <path d="M7 20 L38 31" stroke="#2f9bff"/>
+    <path d="M7 44 L38 33" stroke="#00e0a8"/>
+    <path d="M7 56 L38 34" stroke="#ff7a3d"/>
   </g>
-  <g fill="#6cb8ff" opacity="0.22">
-    <circle cx="40" cy="32" r="7"/>
-    <rect x="43" y="28.6" width="13" height="6.8" rx="3.4"/>
-  </g>
-  <g fill="#eaf4ff">
-    <circle cx="40" cy="32" r="3.6"/>
-    <rect x="43" y="30.2" width="12" height="3.6" rx="1.8"/>
-  </g>
+
+  <!-- beam shooting out, drawn after threads so it reads on top -->
+  <path d="M39 32 L61 21 L61 43 Z" fill="url(#beam)" filter="url(#softglow)"/>
+  <path d="M39 32 L61 21 L61 43 Z" fill="url(#beam)" opacity="0.9"/>
+
+  <!-- hot core -->
+  <circle cx="40" cy="32" r="11" fill="url(#core)"/>
+  <circle cx="40" cy="32" r="4.6" fill="#ffffff"/>
 </svg>
