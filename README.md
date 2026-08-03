@@ -61,6 +61,21 @@ for that invocation:
 THREADBEAM_PUBLISH_ADDRESS=192.168.1.20 docker compose up -d --build
 ```
 
+### Prebuilt image
+
+Every push to `main` (release) or `dev` (day-to-day) builds and publishes an
+image via GitHub Actions (see `.github/workflows/docker-publish.yml`):
+
+```sh
+docker pull ghcr.io/tomlawesome/threadbeam:latest   # main, released
+docker pull ghcr.io/tomlawesome/threadbeam:dev       # dev, latest build
+```
+
+If `docker pull` reports the image as not found/unauthorized, the GHCR
+package is likely still set to private -- open the package settings on
+GitHub (repo → Packages → threadbeam) and set visibility to public, or
+`docker login ghcr.io` first with a PAT that has `read:packages` scope.
+
 ## Emitting an event
 
 Events are accepted only as one JSON object on stdin. The emitter reads no
