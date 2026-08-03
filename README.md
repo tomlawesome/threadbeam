@@ -1,18 +1,54 @@
-# Threadbeam
+> [!IMPORTANT]
+> **Development disclosure:** Threadbeam was coded by AI coding agents
+> (Claude and Mistral) under human direction.
 
-Threadbeam is a lightweight, self-hosted dashboard for seeing concurrent AI
-coding-agent work, blockers, questions, and delivery status at a glance.
+<p align="center">
+  <img src="docs/assets/threadbeam-logo.svg" alt="Threadbeam" width="420">
+</p>
 
-It is deliberately read-only. Threadbeam accepts small, validated lifecycle
-events; it does not inspect agent transcripts, read source code, launch agents,
-run shell commands, or mutate GitHub.
+<p align="center">
+  A lightweight, self-hosted, deliberately read-only dashboard for seeing
+  concurrent AI coding-agent work, blockers, questions, and delivery status at
+  a glance.
+</p>
+
+<p align="center">
+  <em>Node.js 22 built-ins only &middot; no dependencies &middot; no login
+  &middot; loopback by default</em>
+</p>
+
+A one-page overview with the same screenshots lives in
+[`site/`](site/index.html) (open `site/index.html` directly, or serve the
+directory statically).
+
+## At a glance
+
+Threadbeam turns a closed, validated stream of lifecycle events into one live
+view of what each agent is working on, what is blocked, what needs an answer,
+and what has landed.
+
+- **Run it:** `node server.mjs`, then open <http://127.0.0.1:4317>.
+- **Feed it:** one JSON lifecycle event per emitter invocation, on stdin only.
+- **It never reads:** transcripts, prompts, tool-call logs, source files, diffs,
+  or credentials.
+- **It never controls:** it cannot launch, steer, approve, or stop an agent, run
+  shell commands, drive Docker, or write to GitHub.
+
+![The Threadbeam dashboard: summary counters, a live task table of concurrent
+agent tasks, prominent blockers and questions, and a completion
+timeline.](docs/assets/threadbeam-dashboard.png)
 
 ## What it provides
 
 - a live task table with sortable columns;
 - prominent blockers and questions;
+- a per-project breakdown of active/blocker/question/completed counts, once
+  more than one project is active;
+- delivery metrics: completions and average completion time per provider,
+  and average blocker resolution time;
 - bounded completion history and a timestamp-focused timeline;
 - clickable summary counters with an explicit **View all** reset;
+- opt-in browser notifications for new blockers and questions;
 - five full-page colour themes plus light and dark modes;
 - automatic five-second refresh without remote assets or analytics;
 - a strict stdin-only event emitter and owner-private JSONL store;
@@ -134,6 +170,11 @@ The closed, versioned schema is defined in `lib/contract.mjs`.
 claim it. Unknown fields, malformed types, overlong strings, control
 characters, unsafe paths, invalid timestamps, and secret-shaped values are
 rejected.
+
+"Stale" defaults to 20 minutes since the last event; override it with
+`THREADBEAM_STALE_MINUTES` (a positive whole number of minutes) if your
+agents have a different natural cadence. Unset, non-numeric, or non-positive
+values fall back to the default rather than failing to start.
 
 ## Storage and privacy
 
