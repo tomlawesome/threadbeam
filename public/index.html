@@ -29,6 +29,9 @@
           <button id="mode-toggle" type="button" class="mode-toggle" aria-pressed="true">
             <span id="mode-toggle-label">Dark mode</span>
           </button>
+          <button id="notifications-toggle" type="button" class="notifications-toggle" aria-pressed="false">
+            <span id="notifications-toggle-label">Enable notifications</span>
+          </button>
         </div>
       </div>
     </header>
@@ -60,6 +63,23 @@
           </button>
         </div>
         <p id="summary-filter-status" class="summary-filter-status" role="status" aria-live="polite">Showing all activity.</p>
+      </section>
+
+      <section id="project-breakdown-section" aria-labelledby="project-breakdown-heading">
+        <h2 id="project-breakdown-heading">By project</h2>
+        <table id="project-breakdown-table" class="project-breakdown-table">
+          <caption class="visually-hidden">Activity counts broken down by project</caption>
+          <thead>
+            <tr>
+              <th scope="col">Project</th>
+              <th scope="col">Active</th>
+              <th scope="col">Blockers</th>
+              <th scope="col">Questions</th>
+              <th scope="col">Completed</th>
+            </tr>
+          </thead>
+          <tbody id="project-breakdown-body"></tbody>
+        </table>
       </section>
 
       <section id="blockers-section" aria-labelledby="blockers-heading">
@@ -141,6 +161,12 @@
         <h2 id="timeline-heading">Timeline</h2>
         <div id="timeline-list" class="timeline"></div>
         <p id="timeline-empty" class="empty-state" hidden>No events yet.</p>
+      </section>
+
+      <section id="metrics-section" aria-labelledby="metrics-heading">
+        <h2 id="metrics-heading">Delivery metrics</h2>
+        <div id="metrics-grid" class="metrics-grid"></div>
+        <p id="metrics-empty" class="empty-state" hidden>No completions or resolved blockers yet.</p>
       </section>
     </main>
   </div>

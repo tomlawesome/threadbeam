@@ -4,7 +4,8 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import fsp from 'node:fs/promises';
-import { startServer } from '../server.mjs';
+import { startServer, parseStaleMs } from '../server.mjs';
+import { appendEvent } from '../lib/store.mjs';
 
 async function makeTempDir() {
   return fsp.mkdtemp(path.join(os.tmpdir(), 'threadbeam-server-test-'));
@@ -72,6 +73,9 @@ test('GET /api/status requires no login and returns 200 JSON with a bounded shap
     assert.ok(Array.isArray(body.questions));
     assert.ok(Array.isArray(body.completed));
     assert.ok(Array.isArray(body.timeline));
+    assert.ok(body.metrics && typeof body.metrics === 'object');
+    assert.ok(body.metrics.byProvider && typeof body.metrics.byProvider === 'object');
+    assert.ok(body.metrics.blockers && typeof body.metrics.blockers === 'object');
   });
 });
 
@@ -147,4 +151,43 @@ test('no write, launch, or GitHub-shaped endpoints exist', async (t) => {
       assert.equal(res.statusCode, 404);
     }
   });
+});
+
+test('parseStaleMs falls back to undefined when unset, empty, non-numeric, non-integer, or non-positive', () => {
+  for (const env of [{}, { THREADBEAM_STALE_MINUTES: '' }, { THREADBEAM_STALE_MINUTES: 'soon' }, { THREADBEAM_STALE_MINUTES: '5.5' }, { THREADBEAM_STALE_MINUTES: '0' }, { THREADBEAM_STALE_MINUTES: '-3' }]) {
+    assert.equal(parseStaleMs(env), undefined);
+  }
+});
+
+test('parseStaleMs converts a valid whole-minute value to milliseconds', () => {
+  assert.equal(parseStaleMs({ THREADBEAM_STALE_MINUTES: '5' }), 5 * 60 * 1000);
+  assert.equal(parseStaleMs({ THREADBEAM_STALE_MINUTES: '45' }), 45 * 60 * 1000);
+});
+
+test('a configured staleMs is actually honoured end-to-end by /api/status', async (t) => {
+  const storeDir = await makeTempDir();
+  const server = await startServer({ storeDir, port: 0, staleMs: 60_000 });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  await appendEvent(storeDir, {
+    schemaVersion: 1,
+    provider: 'claude',
+    repo: 'example/project',
+    project: 'example-project',
+    taskId: 'issue-1',
+    model: 'claude-sonnet-5',
+    branch: 'agent/issue-1',
+    worktree: 'issue-1-impl',
+    // 2 minutes old: still "fresh" under the default 20-minute threshold,
+    // but stale under this server's configured 1-minute threshold.
+    timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+    state: 'implementing',
+  });
+
+  const res = await request(port, { path: '/api/status' });
+  const body = JSON.parse(res.body);
+  assert.equal(body.live.length, 1);
+  assert.equal(body.live[0].state, 'unknown');
+  assert.equal(body.live[0].rawState, 'implementing');
 });
