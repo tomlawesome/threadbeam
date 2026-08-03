@@ -102,8 +102,8 @@ test('run() starts the server on an ephemeral loopback port and serves the synth
   assert.ok(!observedUrl.includes(':4317/'), 'must not reuse the default Threadbeam port');
   assert.equal(observedStatus.blockers.length, 1);
   assert.equal(observedStatus.questions.length, 1);
-  assert.equal(observedStatus.completed.length, 1);
-  assert.equal(observedStatus.live.length, 3);
+  assert.equal(observedStatus.completed.length, 3);
+  assert.equal(observedStatus.live.length, 4);
 });
 
 // --- overwrite controls --------------------------------------------------

@@ -1,3 +1,7 @@
+> [!IMPORTANT]
+> **Development disclosure:** Threadbeam was coded by AI coding agents
+> (Claude and Mistral) under human direction.
+
 <p align="center">
   <img src="docs/assets/threadbeam-logo.svg" alt="Threadbeam" width="420">
 </p>
@@ -12,6 +16,10 @@
   <em>Node.js 22 built-ins only &middot; no dependencies &middot; no login
   &middot; loopback by default</em>
 </p>
+
+A one-page overview with the same screenshots lives in
+[`site/`](site/index.html) (open `site/index.html` directly, or serve the
+directory statically).
 
 ## At a glance
 

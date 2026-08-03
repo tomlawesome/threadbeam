@@ -19,9 +19,17 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 
 export const CANONICAL_OUTPUT_PATH = 'docs/assets/threadbeam-dashboard.png';
 
+// Deliberately spans multiple synthetic projects, all five providers, and
+// every lifecycle state (including a resolved-then-recurring-style blocker
+// history) so the captured screenshot represents the dashboard at a
+// realistic, fully-populated scale -- not just the four-event minimum the
+// contract requires. All repos/branches/titles are fabricated ("-demo"
+// suffixed, "example/" prefixed) per the privacy requirements above.
 export function synthesizeEvents(now) {
   const ago = (ms) => new Date(now - ms).toISOString();
   return [
+    // threadbeam-demo: an in-progress task, an open question, and two
+    // completed tasks (for the per-provider delivery metrics).
     {
       schemaVersion: SCHEMA_VERSION,
       provider: 'claude',
@@ -35,25 +43,6 @@ export function synthesizeEvents(now) {
       worktree: 'demo-active',
       timestamp: ago(2 * 60 * 1000),
       state: 'implementing',
-    },
-    {
-      schemaVersion: SCHEMA_VERSION,
-      provider: 'codex',
-      repo: 'example/threadbeam-demo',
-      project: 'threadbeam-demo',
-      taskId: 'demo-blocked',
-      issueNumber: 102,
-      title: 'Fix flaky integration test',
-      model: 'gpt-5-codex',
-      branch: 'agent/demo-blocked',
-      worktree: 'demo-blocked',
-      timestamp: ago(5 * 60 * 1000),
-      state: 'blocked',
-      blocker: {
-        cause: 'CI runner ran out of disk space',
-        owner: 'sol',
-        nextAction: 'clear the CI cache and retry',
-      },
     },
     {
       schemaVersion: SCHEMA_VERSION,
@@ -87,8 +76,102 @@ export function synthesizeEvents(now) {
       timestamp: ago(20 * 60 * 1000),
       state: 'completed',
     },
+    {
+      schemaVersion: SCHEMA_VERSION,
+      provider: 'luna',
+      repo: 'example/threadbeam-demo',
+      project: 'threadbeam-demo',
+      taskId: 'demo-adapters',
+      issueNumber: 104,
+      title: 'Emit automatic provider lifecycle events',
+      model: 'luna-1',
+      branch: 'agent/demo-adapters',
+      worktree: 'demo-adapters',
+      timestamp: ago(50 * 60 * 1000),
+      state: 'completed',
+    },
+
+    // mikroview-demo: an open blocker plus a completed task, so metrics
+    // and blockers both have a second project's worth of data.
+    {
+      schemaVersion: SCHEMA_VERSION,
+      provider: 'codex',
+      repo: 'example/mikroview-demo',
+      project: 'mikroview-demo',
+      taskId: 'demo-blocked',
+      issueNumber: 102,
+      title: 'Fix flaky integration test',
+      model: 'gpt-5-codex',
+      branch: 'agent/demo-blocked',
+      worktree: 'demo-blocked',
+      timestamp: ago(5 * 60 * 1000),
+      state: 'blocked',
+      blocker: {
+        cause: 'CI runner ran out of disk space',
+        owner: 'sol',
+        nextAction: 'clear the CI cache and retry',
+      },
+    },
+    {
+      schemaVersion: SCHEMA_VERSION,
+      provider: 'claude',
+      repo: 'example/mikroview-demo',
+      project: 'mikroview-demo',
+      taskId: 'demo-colorways',
+      issueNumber: 105,
+      title: 'Flesh out colorway theming',
+      model: 'claude-sonnet-5',
+      branch: 'agent/demo-colorways',
+      worktree: 'demo-colorways',
+      timestamp: ago(30 * 60 * 1000),
+      state: 'completed',
+    },
+
+    // orbit-demo: a resolved blocker (blocked, then unblocked), giving the
+    // delivery-metrics panel a blocker-resolution-time sample too.
+    {
+      schemaVersion: SCHEMA_VERSION,
+      provider: 'mistral',
+      repo: 'example/orbit-demo',
+      project: 'orbit-demo',
+      taskId: 'demo-renewals',
+      issueNumber: 106,
+      title: 'Add renewal reminders',
+      model: 'mistral-large',
+      branch: 'agent/demo-renewals',
+      worktree: 'demo-renewals',
+      timestamp: ago(75 * 60 * 1000),
+      state: 'blocked',
+      blocker: {
+        cause: 'notification channel not yet decided',
+        owner: 'sol',
+        nextAction: 'pick email vs. SMS',
+      },
+    },
+    {
+      schemaVersion: SCHEMA_VERSION,
+      provider: 'mistral',
+      repo: 'example/orbit-demo',
+      project: 'orbit-demo',
+      taskId: 'demo-renewals',
+      issueNumber: 106,
+      title: 'Add renewal reminders',
+      model: 'mistral-large',
+      branch: 'agent/demo-renewals',
+      worktree: 'demo-renewals',
+      timestamp: ago(8 * 60 * 1000),
+      state: 'implementing',
+    },
   ];
 }
+
+// Tall enough to fit the whole dashboard (summary, blockers, questions,
+// live tasks, completed history, timeline, delivery metrics) in one shot
+// without scrolling -- captureBrowserScreenshot has no separate "full
+// page" mode, so this is what stands in for one. If the page ever grows
+// taller than this, the shot will crop rather than stretch; widen it here
+// rather than adding a decorative empty margin below shorter content.
+const README_CAPTURE_WINDOW_SIZE = '1280,3200';
 
 export async function run({
   repoRoot = REPO_ROOT,
@@ -98,7 +181,7 @@ export async function run({
   candidateNames,
   isExecutable,
   spawnFn,
-  windowSize,
+  windowSize = README_CAPTURE_WINDOW_SIZE,
   timeoutMs,
   extraArgs,
 } = {}) {
