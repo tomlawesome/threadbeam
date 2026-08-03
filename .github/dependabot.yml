@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Threadbeam ships zero npm dependencies by design (see CONTRIBUTING.md),
+  # so there is deliberately no npm ecosystem entry here -- nothing to
+  # update. GitHub Actions and the container base image are pinned to exact
+  # SHAs/digests (see AGENTS.md) and are the only external inputs that can
+  # actually drift.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
