@@ -26,11 +26,6 @@ and what has landed.
 - **It never controls:** it cannot launch, steer, approve, or stop an agent, run
   shell commands, drive Docker, or write to GitHub.
 
-<!--
-  Placeholder reference. docs/assets/threadbeam-dashboard.png is NOT in this
-  change: Sol captures the real synthetic dashboard screenshot before
-  integration. Remove this comment once the real asset is committed.
--->
 ![The Threadbeam dashboard: summary counters, a live task table of concurrent
 agent tasks, prominent blockers and questions, and a completion
 timeline.](docs/assets/threadbeam-dashboard.png)
