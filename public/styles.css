@@ -1,84 +1,107 @@
 :root {
   color-scheme: dark;
-  --canvas-base: #080c11;
-  --surface-base: #141a22;
-  --surface-raised-base: #1a212b;
-  --border-base: #2c3644;
-  --text: #f2f5f8;
-  --muted: #a9b6c4;
-  --accent: #6cb8ff;
-  --theme-secondary: #53e6c2;
-  --on-accent: #06121f;
-  --bg: color-mix(in srgb, var(--canvas-base) 92%, var(--accent));
-  --surface: color-mix(in srgb, var(--surface-base) 94%, var(--accent));
-  --surface-raised: color-mix(in srgb, var(--surface-raised-base) 90%, var(--theme-secondary));
-  --border: color-mix(in srgb, var(--border-base) 78%, var(--accent));
-  --accent-wash: color-mix(in srgb, var(--accent) 13%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent) 55%, var(--border));
-  --danger: #ff8a80;
-  --warning: #ffd479;
-  --ok: #7be08c;
-  --provider-codex: #b39cff;
-  --provider-claude: #ffb37a;
-  --provider-mistral: #7ad9ff;
-  --provider-ollama: #8ce8b0;
-  --provider-luna: #ff9ecb;
-  --provider-other: #c7d0da;
-  --state-implementing: #6cb8ff;
-  --state-validating: #8ce0ff;
-  --state-awaiting-review: #c9a6ff;
-  --state-unknown: #8b98a8;
+
+  /* ---------- Layer 1: primitives ----------
+     Raw values only. Theme-swappable, never referenced outside this block
+     and the light-mode override below. Component CSS must never reference
+     a --tb-* token directly -- only the semantic layer beneath it. */
+  --tb-neutral-0: #0a0b0f;
+  --tb-neutral-1: #121419;
+  --tb-neutral-2: #1a1d24;
+  --tb-neutral-3: #23272f;
+  --tb-neutral-4: #333842;
+  --tb-neutral-5: #7d848f;
+  --tb-neutral-6: #9ba3af;
+  --tb-neutral-7: #e8eaed;
+
+  --tb-accent-1: #4a72e0;
+  --tb-accent-2: #5b8cff;
+  --tb-accent-3: #7aa2ff;
+
+  --tb-status-ok: #3fcf7f;
+  --tb-status-warning: #e8b13a;
+  --tb-status-danger: #f4645f;
+
+  --tb-provider-codex: #9b8cff;
+  --tb-provider-claude: #f0a56a;
+  --tb-provider-mistral: #5cc9e8;
+  --tb-provider-ollama: #63d19e;
+  --tb-provider-luna: #f08cc4;
+
+  --tb-on-accent: #06121f;
+
+  /* ---------- Layer 2: semantic tokens ----------
+     The only tokens layer-3 component CSS may reference. color-mix() is
+     permitted here (deriving a semantic token is exactly what this layer
+     is for) but never in component CSS below -- see AGENTS.md/issue #17. */
+  --bg: var(--tb-neutral-0);
+  --surface: var(--tb-neutral-1);
+  --surface-raised: var(--tb-neutral-2);
+  --border: var(--tb-neutral-3);
+  --border-strong: var(--tb-neutral-4);
+  --text: var(--tb-neutral-7);
+  --text-secondary: var(--tb-neutral-6);
+  --text-tertiary: var(--tb-neutral-5);
+
+  --accent: var(--tb-accent-2);
+  --accent-hover: var(--tb-accent-3);
+  --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);
+  --on-accent: var(--tb-on-accent);
   --focus-ring: var(--accent);
-}
 
-:root[data-theme="ocean"] {
-  --accent: #6cb8ff;
-  --theme-secondary: #53e6c2;
-}
+  --danger: var(--tb-status-danger);
+  --warning: var(--tb-status-warning);
+  --ok: var(--tb-status-ok);
+  --danger-wash: color-mix(in srgb, var(--danger) 14%, transparent);
+  --warning-wash: color-mix(in srgb, var(--warning) 14%, transparent);
+  --ok-wash: color-mix(in srgb, var(--ok) 14%, transparent);
 
-:root[data-theme="violet"] {
-  --accent: #b39cff;
-  --theme-secondary: #f39ac7;
-}
+  --provider-codex: var(--tb-provider-codex);
+  --provider-claude: var(--tb-provider-claude);
+  --provider-mistral: var(--tb-provider-mistral);
+  --provider-ollama: var(--tb-provider-ollama);
+  --provider-luna: var(--tb-provider-luna);
+  --provider-other: var(--tb-neutral-6);
 
-:root[data-theme="amber"] {
-  --accent: #ffc266;
-  --theme-secondary: #ff8a80;
-}
+  --state-implementing: var(--accent);
+  --state-validating: var(--tb-accent-3);
+  --state-awaiting-review: var(--tb-provider-codex);
+  --state-unknown: var(--text-tertiary);
 
-:root[data-theme="emerald"] {
-  --accent: #7be08c;
-  --theme-secondary: #63d8d3;
-}
-
-:root[data-theme="rose"] {
-  --accent: #ff9ecb;
-  --theme-secondary: #c9a6ff;
+  --bg-translucent: color-mix(in srgb, var(--bg) 91%, transparent);
 }
 
 :root[data-mode="light"] {
   color-scheme: light;
-  --canvas-base: #f4f6f9;
-  --surface-base: #ffffff;
-  --surface-raised-base: #eef1f6;
-  --border-base: #ccd3dc;
-  --text: #10151b;
-  --muted: #51606f;
-  --on-accent: #10151b;
-  --danger: #b3261e;
-  --warning: #8a5a00;
-  --ok: #1e7d3c;
-  --provider-codex: #6a4fd6;
-  --provider-claude: #9a4e00;
-  --provider-mistral: #0f7ea8;
-  --provider-ollama: #146b3d;
-  --provider-luna: #a3305d;
-  --provider-other: #4d5966;
-  --state-implementing: #0f5fa8;
-  --state-validating: #0f7ea8;
-  --state-awaiting-review: #6a4fd6;
-  --state-unknown: #51606f;
-  --focus-ring: #0f5fa8;
+
+  --tb-neutral-0: #fbfbfc;
+  --tb-neutral-1: #ffffff;
+  --tb-neutral-2: #f4f5f7;
+  --tb-neutral-3: #e4e6ea;
+  --tb-neutral-4: #cbd0d7;
+  --tb-neutral-5: #6b7280;
+  --tb-neutral-6: #4b5563;
+  --tb-neutral-7: #16181d;
+
+  /* Deeper than the dark-mode accent -- a wash of the pale dark-mode value
+     reads too washed-out against a light page (same reasoning as the
+     neutral ramp needing its own light-mode values, not a mix). Needs
+     light on-accent text, not dark -- see --tb-on-accent below. */
+  --tb-accent-1: #2d47b0;
+  --tb-accent-2: #3b5bdb;
+  --tb-accent-3: #5470e0;
+
+  --tb-status-ok: #1e7d3c;
+  --tb-status-warning: #8a5a00;
+  --tb-status-danger: #b3261e;
+
+  --tb-provider-codex: #6a4fd6;
+  --tb-provider-claude: #9a4e00;
+  --tb-provider-mistral: #0f7ea8;
+  --tb-provider-ollama: #146b3d;
+  --tb-provider-luna: #a3305d;
+
+  --tb-on-accent: #ffffff;
 }
 
 * {
@@ -87,10 +110,7 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 92% -8%, color-mix(in srgb, var(--theme-secondary) 17%, transparent), transparent 30rem),
-    radial-gradient(circle at 8% 22%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36rem),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.5;
@@ -112,8 +132,8 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: color-mix(in srgb, var(--bg) 91%, transparent);
-  border-bottom: 1px solid var(--accent-border);
+  background: var(--bg-translucent);
+  border-bottom: 1px solid var(--border);
   backdrop-filter: blur(14px);
 }
 
@@ -123,7 +143,7 @@ body {
 }
 
 .subtitle {
-  color: var(--muted);
+  color: var(--text-secondary);
   margin: 0.15rem 0 0;
   font-size: 0.85rem;
 }
@@ -143,49 +163,6 @@ body {
   margin-left: 0.5rem;
   padding-left: 0.75rem;
   border-left: 1px solid var(--border);
-}
-
-.theme-picker {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: none;
-  margin: 0;
-  padding: 0;
-}
-
-.theme-swatch {
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  padding: 0;
-  cursor: pointer;
-}
-
-.theme-swatch[aria-pressed="true"] {
-  border-color: var(--text);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
-}
-
-.theme-swatch-ocean {
-  background: #6cb8ff;
-}
-
-.theme-swatch-violet {
-  background: #b39cff;
-}
-
-.theme-swatch-amber {
-  background: #ffc266;
-}
-
-.theme-swatch-emerald {
-  background: #7be08c;
-}
-
-.theme-swatch-rose {
-  background: #ff9ecb;
 }
 
 .mode-toggle {
@@ -224,7 +201,7 @@ body {
 }
 
 .notifications-toggle:disabled {
-  color: var(--muted);
+  color: var(--text-secondary);
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -281,7 +258,7 @@ button:focus-visible,
   padding: 0;
   min-height: 1.4rem;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .status-banner-error {
@@ -298,27 +275,16 @@ section {
 }
 
 h2 {
-  position: relative;
   font-size: 1.15rem;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.35rem;
 }
 
-h2::after {
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 4rem;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--theme-secondary));
-  content: '';
-}
-
 .summary-panel {
   padding: 1rem;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border);
   border-radius: 1rem;
-  background: linear-gradient(135deg, var(--accent-wash), color-mix(in srgb, var(--surface) 94%, var(--theme-secondary)));
+  background: var(--surface);
 }
 
 .summary-heading-row {
@@ -335,7 +301,7 @@ h2::after {
 
 .summary-filter-all {
   flex-shrink: 0;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
 }
@@ -355,11 +321,12 @@ h2::after {
 
 .stat {
   --stat-accent: var(--accent);
+  --stat-accent-wash: var(--accent-wash);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  background: color-mix(in srgb, var(--surface) 92%, var(--stat-accent));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-top: 2px solid var(--stat-accent);
   border-radius: 0.75rem;
@@ -370,14 +337,17 @@ h2::after {
 
 .stat-blockers {
   --stat-accent: var(--danger);
+  --stat-accent-wash: var(--danger-wash);
 }
 
 .stat-questions {
   --stat-accent: var(--warning);
+  --stat-accent-wash: var(--warning-wash);
 }
 
 .stat-completed {
   --stat-accent: var(--ok);
+  --stat-accent-wash: var(--ok-wash);
 }
 
 .stat-filter:hover {
@@ -388,8 +358,8 @@ h2::after {
 
 .stat-filter[aria-pressed="true"] {
   border-color: var(--stat-accent);
-  background: color-mix(in srgb, var(--surface) 78%, var(--stat-accent));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--stat-accent) 35%, transparent);
+  background: var(--stat-accent-wash);
+  box-shadow: inset 0 0 0 1px var(--stat-accent);
 }
 
 .stat-value {
@@ -400,7 +370,7 @@ h2::after {
 
 .stat-label {
   margin: 0.15rem 0 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -409,7 +379,7 @@ h2::after {
 .summary-filter-status {
   min-height: 1.35rem;
   margin: 0.75rem 0 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.82rem;
 }
 
@@ -419,7 +389,7 @@ table {
 }
 
 thead {
-  background: linear-gradient(90deg, var(--accent-wash), transparent);
+  background: var(--surface-raised);
 }
 
 .mobile-sort-controls {
@@ -435,7 +405,7 @@ td {
 }
 
 th {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
@@ -535,13 +505,13 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .activity-exact {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.8rem;
 }
 
 .activity-started {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.78rem;
 }
 
@@ -597,7 +567,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .state-queued {
-  --state-color: var(--muted);
+  --state-color: var(--text-secondary);
 }
 
 .state-implementing {
@@ -633,7 +603,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .state-chip {
-  color: var(--state-color, var(--muted));
+  color: var(--state-color, var(--text-secondary));
   border-color: var(--state-color, var(--border));
 }
 
@@ -661,7 +631,7 @@ th[aria-sort="descending"] .sort-button::after {
 
 .attn-row,
 .feed-item {
-  background: color-mix(in srgb, var(--surface) 96%, var(--accent));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.6rem;
   padding: 0.75rem 1rem;
@@ -694,7 +664,7 @@ th[aria-sort="descending"] .sort-button::after {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--muted);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -713,7 +683,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .attn-row-meta {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.82rem;
 }
 
@@ -726,7 +696,7 @@ th[aria-sort="descending"] .sort-button::after {
 .field-line-emphasis .field-value {
   font-weight: 600;
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: var(--accent-wash);
   padding: 0.05rem 0.5rem;
   border-radius: 0.3rem;
 }
@@ -739,7 +709,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .field-label {
-  color: var(--muted);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -768,7 +738,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .feed-project {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
@@ -793,7 +763,7 @@ th[aria-sort="descending"] .sort-button::after {
 .timeline-group-heading {
   margin: 0 0 0.5rem;
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -802,7 +772,7 @@ th[aria-sort="descending"] .sort-button::after {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-left: 2px solid var(--accent-border);
+  border-left: 2px solid var(--border-strong);
 }
 
 .timeline-node {
@@ -847,7 +817,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .timeline-time-full {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
 }
@@ -857,7 +827,7 @@ th[aria-sort="descending"] .sort-button::after {
 }
 
 .empty-state {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-style: italic;
 }
 
@@ -890,7 +860,7 @@ th[aria-sort="descending"] .sort-button::after {
 
 .metric-card-label {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -898,14 +868,14 @@ th[aria-sort="descending"] .sort-button::after {
 
 .metric-card-detail {
   margin: 0.25rem 0 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.82rem;
 }
 
 .metric-chip-blockers {
   color: var(--danger);
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border: 1px solid var(--danger);
+  background: var(--danger-wash);
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
   font-size: 0.78rem;
@@ -931,7 +901,7 @@ th[aria-sort="descending"] .sort-button::after {
 @media (prefers-contrast: more) {
   :root {
     --border: #6f7b8a;
-    --muted: #d3dce4;
+    --text-secondary: #d3dce4;
   }
 
   .chip,
@@ -949,10 +919,6 @@ th[aria-sort="descending"] .sort-button::after {
   .feed-item,
   .timeline-rail {
     border: 1px solid CanvasText;
-  }
-
-  .theme-swatch {
-    forced-color-adjust: none;
   }
 
   .chip-dot,
@@ -990,14 +956,14 @@ th[aria-sort="descending"] .sort-button::after {
     gap: 0.45rem 0.6rem;
     margin: 0 0 0.8rem;
     padding: 0.75rem;
-    border: 1px solid var(--accent-border);
+    border: 1px solid var(--border);
     border-radius: 0.6rem;
-    background: var(--accent-wash);
+    background: var(--surface-raised);
   }
 
   .mobile-sort-controls label {
     grid-column: 1 / -1;
-    color: var(--muted);
+    color: var(--text-secondary);
     font-size: 0.8rem;
     font-weight: 600;
   }
@@ -1051,7 +1017,7 @@ th[aria-sort="descending"] .sort-button::after {
     content: attr(data-label);
     display: block;
     font-size: 0.75rem;
-    color: var(--muted);
+    color: var(--text-secondary);
   }
 
   .feed-item {

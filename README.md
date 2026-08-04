@@ -49,7 +49,7 @@ timeline.](docs/assets/threadbeam-dashboard.png)
 - bounded completion history and a timestamp-focused timeline;
 - clickable summary counters with an explicit **View all** reset;
 - opt-in browser notifications for new blockers and questions;
-- five full-page colour themes plus light and dark modes;
+- a considered light/dark palette, not a decorative accent picker;
 - automatic five-second refresh without remote assets or analytics;
 - a strict stdin-only event emitter and owner-private JSONL store;
 - loopback-safe native defaults and a hardened container example.
