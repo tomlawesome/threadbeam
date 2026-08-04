@@ -8,7 +8,7 @@ import net from 'node:net';
 import path from 'node:path';
 import fsp from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readEvents, deriveStatus, defaultStoreDir } from './lib/store.mjs';
+import { readEvents, deriveStatus, deriveMetrics, defaultStoreDir } from './lib/store.mjs';
 
 const DEFAULT_HOST = '127.0.0.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -69,6 +69,7 @@ async function sendStatic(res, method, entry) {
 
 function createServer(options = {}) {
   const storeDir = options.storeDir ?? defaultStoreDir();
+  const staleMs = options.staleMs;
 
   return http.createServer(async (req, res) => {
     const method = req.method ?? 'GET';
@@ -94,8 +95,10 @@ function createServer(options = {}) {
     if (url.pathname === '/api/status') {
       try {
         const { events, parseErrors } = await readEvents(storeDir);
-        const status = deriveStatus(events, { now: Date.now() });
+        const now = Date.now();
+        const status = deriveStatus(events, { now, staleMs });
         status.parseErrors = parseErrors;
+        status.metrics = deriveMetrics(events, { now });
         sendJson(res, method, 200, status);
       } catch {
         sendJson(res, method, 500, { error: 'status_unavailable' });
@@ -140,6 +143,18 @@ export function startServer(options = {}) {
   });
 }
 
+// Parses THREADBEAM_STALE_MINUTES into milliseconds for deriveStatus's
+// staleMs option. Any unset, non-numeric, non-integer, or non-positive
+// value falls back to undefined -- deriveStatus's own default then applies,
+// the same as if the variable were never set. Never a fatal startup error.
+export function parseStaleMs(env = process.env) {
+  const raw = env.THREADBEAM_STALE_MINUTES;
+  if (raw === undefined || raw === '') return undefined;
+  const minutes = Number(raw);
+  if (!Number.isFinite(minutes) || !Number.isInteger(minutes) || minutes <= 0) return undefined;
+  return minutes * 60 * 1000;
+}
+
 function isMain() {
   return Boolean(
     process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href,
@@ -149,7 +164,8 @@ function isMain() {
 if (isMain()) {
   const port = Number(process.env.THREADBEAM_PORT ?? 4317);
   const host = process.env.THREADBEAM_HOST ?? DEFAULT_HOST;
-  startServer({ host, port })
+  const staleMs = parseStaleMs();
+  startServer({ host, port, staleMs })
     .then((server) => {
       const address = server.address();
       const displayHost = address.address.includes(':') ? `[${address.address}]` : address.address;

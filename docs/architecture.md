@@ -21,9 +21,10 @@ analytics, cookies, accounts, or write endpoints.
 - Browser clients are trusted developers on loopback or a trusted LAN. The UI
   uses `textContent`, a restrictive content security policy, and no inline or
   remote executable content.
-- Provider adapters may translate wrapper lifecycle states into the event
-  schema, but they may not pass transcripts or grant providers access to the
-  Threadbeam store or HTTP service.
+- Provider adapters (see [docs/adapters.md](adapters.md)) may translate
+  wrapper lifecycle states into the event schema, but they may not pass
+  transcripts or grant providers access to the Threadbeam store or HTTP
+  service.
 
 ## Explicit non-capabilities
 

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 356 96" width="356" height="96" role="img" aria-labelledby="threadbeam-logo-title threadbeam-logo-desc">
+  <title id="threadbeam-logo-title">Threadbeam</title>
+  <desc id="threadbeam-logo-desc">Four bright colored threads converge into a glowing point and fire a beam of light beside the Threadbeam wordmark and the line "read-only agent delivery visibility".</desc>
+  <defs>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#bfe4ff"/>
+      <stop offset="100%" stop-color="#6cb8ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beam" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#eaf6ff" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#9fd6ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#6cb8ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3.5"/>
+    </filter>
+  </defs>
+
+  <rect x="0.75" y="0.75" width="354.5" height="94.5" rx="18" fill="#0a0e14" stroke="#26344a" stroke-width="1.5"/>
+
+  <g transform="translate(10 16)">
+    <g fill="none" stroke-width="5" stroke-linecap="round" filter="url(#glow)">
+      <path d="M7 8 L38 30" stroke="#a06bff"/>
+      <path d="M7 20 L38 31" stroke="#2f9bff"/>
+      <path d="M7 44 L38 33" stroke="#00e0a8"/>
+      <path d="M7 56 L38 34" stroke="#ff7a3d"/>
+    </g>
+    <path d="M39 32 L61 21 L61 43 Z" fill="url(#beam)" filter="url(#softglow)"/>
+    <path d="M39 32 L61 21 L61 43 Z" fill="url(#beam)" opacity="0.9"/>
+    <circle cx="40" cy="32" r="11" fill="url(#core)"/>
+    <circle cx="40" cy="32" r="4.6" fill="#ffffff"/>
+  </g>
+
+  <g font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="88" y="52" fill="#f2f5f8" font-size="31" font-weight="600" textLength="172" lengthAdjust="spacingAndGlyphs">Threadbeam</text>
+    <text x="88" y="72" fill="#a9b6c4" font-size="13" textLength="232" lengthAdjust="spacingAndGlyphs">read-only agent delivery visibility</text>
+  </g>
+</svg>

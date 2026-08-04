@@ -161,17 +161,13 @@ test('the dashboard never uses inline style attributes or element.style mutation
   assert.doesNotMatch(app, /\.style\s*[.[]/u);
 });
 
-test('the dashboard exposes exactly five accessible accent theme controls plus a light/dark toggle', async () => {
+test('the dashboard ships a single palette (no accent theme picker) plus an accessible light/dark toggle', async () => {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
   const html = await fsp.readFile(path.join(root, 'public', 'index.html'), 'utf8');
-  const swatchMatches = [...html.matchAll(/<button[^>]*class="theme-swatch[^"]*"[^>]*>/gu)];
-  assert.equal(swatchMatches.length, 5);
-  for (const match of swatchMatches) {
-    assert.match(match[0], /data-theme="[^"]+"/u);
-    assert.match(match[0], /aria-label="[^"]+"/u);
-  }
-  assert.match(html, /aria-pressed="true"/u);
+  assert.doesNotMatch(html, /theme-swatch/u);
+  assert.doesNotMatch(html, /theme-picker/u);
   assert.match(html, /id="mode-toggle"/u);
+  assert.match(html, /aria-pressed="true"/u);
 });
 
 test('theme and mode preferences persist through guarded localStorage access', async () => {
@@ -186,18 +182,57 @@ test('theme and mode preferences persist through guarded localStorage access', a
   assert.match(fetchCalls[0], /\/api\/status/u);
 });
 
-test('each accent theme changes the dashboard palette rather than one control', async () => {
+// Enforces the token architecture from issue #17: a single palette, laid
+// out in three layers (primitives -- semantic tokens -- component CSS),
+// with two hard rules. Regressing either is exactly how the old five-theme
+// system ended up with the accent tinting every neutral.
+test('ships one palette: no per-theme blocks, and --theme-secondary is gone', async () => {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
   const css = await fsp.readFile(path.join(root, 'public', 'styles.css'), 'utf8');
-  for (const theme of ['ocean', 'violet', 'amber', 'emerald', 'rose']) {
-    const block = css.match(new RegExp(`:root\\[data-theme="${theme}"\\] \\{([\\s\\S]*?)\\}`, 'u'));
-    assert.ok(block, `missing ${theme} theme`);
-    assert.match(block[1], /--accent:/u);
-    assert.match(block[1], /--theme-secondary:/u);
+  assert.doesNotMatch(css, /:root\[data-theme=/u);
+  assert.doesNotMatch(css, /--theme-secondary/u);
+});
+
+test('hard rule: neutrals (bg/surface/border) never mix in the accent', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const css = await fsp.readFile(path.join(root, 'public', 'styles.css'), 'utf8');
+  for (const token of ['--bg:', '--surface:', '--surface-raised:', '--border:', '--border-strong:']) {
+    const line = css.split('\n').find((l) => l.trim().startsWith(token));
+    assert.ok(line, `missing definition for ${token}`);
+    assert.doesNotMatch(line, /accent/iu, `${token} must not reference the accent`);
   }
-  assert.match(css, /radial-gradient[\s\S]*--theme-secondary/u);
-  assert.match(css, /--surface:[^;]*--accent/u);
-  assert.match(css, /--border:[^;]*--accent/u);
+});
+
+test('hard rule: color-mix() only appears in the layer-1/2 token definitions, never in component CSS', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const css = await fsp.readFile(path.join(root, 'public', 'styles.css'), 'utf8');
+  const totalColorMix = (css.match(/color-mix\(/gu) ?? []).length;
+
+  const rootBlock = css.match(/:root\s*\{[\s\S]*?\n\}/u);
+  const lightBlock = css.match(/:root\[data-mode="light"\]\s*\{[\s\S]*?\n\}/u);
+  assert.ok(rootBlock, 'missing :root token block');
+  assert.ok(lightBlock, 'missing :root[data-mode="light"] token block');
+  const tokenColorMix =
+    (rootBlock[0].match(/color-mix\(/gu) ?? []).length +
+    (lightBlock[0].match(/color-mix\(/gu) ?? []).length;
+
+  assert.equal(totalColorMix, tokenColorMix, 'color-mix() found outside the token layer');
+});
+
+test('provider and state colours stay defined for both modes and never rely on colour alone', async () => {
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const css = await fsp.readFile(path.join(root, 'public', 'styles.css'), 'utf8');
+  const app = await fsp.readFile(path.join(root, 'public', 'app.js'), 'utf8');
+  for (const provider of ['codex', 'claude', 'mistral', 'ollama', 'luna']) {
+    assert.match(css, new RegExp(`--provider-${provider}:`, 'u'));
+  }
+  for (const state of ['implementing', 'validating', 'awaiting-review', 'unknown']) {
+    assert.match(css, new RegExp(`--state-${state}:`, 'u'));
+  }
+  // Chips pair colour with a text label (chip-dot/state-chip render text
+  // content, not just a coloured swatch) -- verified structurally here
+  // since it's a rendering contract, not a static string in the source.
+  assert.match(app, /label\.textContent = formatState\(state\)/u);
 });
 
 test('summary counters are accessible filters with an explicit all-activity reset', async () => {

@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Threadbeam — read-only agent delivery visibility</title>
+<meta name="description" content="A lightweight, self-hosted, deliberately read-only dashboard for seeing concurrent AI coding-agent work, blockers, questions, and delivery status at a glance." />
+<link rel="icon" type="image/svg+xml" href="img/logo-mark.svg" />
+<style>
+  /* Same palette as the app (public/styles.css) -- kept in sync by hand
+     since this is a standalone static page, not a build of the app. See
+     issue #17 for the token architecture and measured contrast ratios. */
+  :root {
+    --bg: #0a0b0f;
+    --bg-elevated: #121419;
+    --bg-hover: #1a1d24;
+    --border: #23272f;
+    --fg: #e8eaed;
+    --fg-muted: #9ba3af;
+    --fg-dim: #7d848f;
+    --accent: #5b8cff;
+    --on-accent: #06121f;
+    --ok: #3fcf7f;
+    --danger: #f4645f;
+    --warning: #e8b13a;
+    --provider-codex: #9b8cff;
+    --provider-claude: #f0a56a;
+    --provider-mistral: #5cc9e8;
+    --provider-ollama: #63d19e;
+    --provider-luna: #f08cc4;
+    --font-sans: -apple-system, 'Segoe UI', system-ui, Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  :root[data-theme='light'] {
+    --bg: #fbfbfc;
+    --bg-elevated: #ffffff;
+    --bg-hover: #f4f5f7;
+    --border: #e4e6ea;
+    --fg: #16181d;
+    --fg-muted: #4b5563;
+    --fg-dim: #6b7280;
+    /* Deeper than the dark-mode accent -- a wash of the pale dark-mode
+       value reads too washed-out against a light page, same reasoning as
+       the app's own light-mode override. Needs light on-accent text. */
+    --accent: #3b5bdb;
+    --on-accent: #ffffff;
+    --ok: #1e7d3c;
+    --danger: #b3261e;
+    --warning: #8a5a00;
+    --provider-codex: #6a4fd6;
+    --provider-claude: #9a4e00;
+    --provider-mistral: #0f7ea8;
+    --provider-ollama: #146b3d;
+    --provider-luna: #a3305d;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  img { max-width: 100%; display: block; }
+  ::selection { background: var(--accent); color: var(--on-accent); }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  header.site {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  header.site .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    color: inherit;
+  }
+  .brand img { width: 26px; height: 26px; }
+  .brand .accent { color: var(--accent); }
+  nav.site-nav { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  nav.site-nav a { color: var(--fg-muted); text-decoration: none; font-size: 14px; }
+  nav.site-nav a:hover { color: var(--fg); }
+  .ai-badge {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--fg-dim);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    white-space: nowrap;
+    cursor: help;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 7px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-ghost { border-color: var(--border); color: var(--fg); background: transparent; }
+  .btn-ghost:hover { border-color: var(--fg-muted); }
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+  }
+  .theme-toggle:hover { color: var(--fg); border-color: var(--fg-muted); }
+
+  .hero { position: relative; overflow: hidden; padding: 88px 0 56px; }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(900px 420px at 82% -10%, rgba(91, 140, 255, 0.14), transparent 60%),
+      radial-gradient(600px 320px at 0% 100%, rgba(63, 207, 127, 0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .hero .wrap { position: relative; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    margin: 0 0 14px;
+  }
+  h1 { font-size: 42px; line-height: 1.12; margin: 0 0 18px; letter-spacing: -0.01em; max-width: 20ch; }
+  .accent { color: var(--accent); }
+  .hero-sub { color: var(--fg-muted); font-size: 17px; line-height: 1.6; max-width: 56ch; margin: 0 0 28px; }
+  .hero-sub code {
+    font-family: var(--font-mono);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 15px;
+  }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    margin: 0 0 12px;
+  }
+
+  .features { padding: 56px 0; border-top: 1px solid var(--border); }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 8px;
+  }
+  .feature-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .feature-card img { width: 100%; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .feature-card-body { padding: 18px 20px; }
+  .feature-card h3 { font-size: 15px; margin: 0 0 8px; }
+  .feature-card p { color: var(--fg-muted); font-size: 14px; line-height: 1.55; margin: 0; }
+
+  .proof { padding: 56px 0; border-top: 1px solid var(--border); }
+  .proof-frame {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-elevated);
+  }
+  .proof-frame .chrome {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .proof-frame .chrome span {
+    width: 10px; height: 10px; border-radius: 50%; background: var(--border);
+  }
+  .proof-frame img[data-theme-img] { display: none; }
+  :root:not([data-theme='light']) .proof-frame img[data-theme-img='dark'] { display: block; }
+  :root[data-theme='light'] .proof-frame img[data-theme-img='light'] { display: block; }
+
+  .quickstart { padding: 56px 0; border-top: 1px solid var(--border); }
+  .terminal {
+    background: #0a0d12;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    color: #d8dee6;
+  }
+  .terminal .chrome { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #1c2430; }
+  .terminal .chrome span { width: 10px; height: 10px; border-radius: 50%; background: #232a38; }
+  .terminal pre {
+    margin: 0;
+    padding: 20px 22px;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .terminal .prompt { color: #6b7686; }
+  .terminal .cmd { color: #d8dee6; }
+  .terminal .flag { color: var(--provider-ollama); }
+  .terminal .val { color: var(--provider-mistral); }
+  .quickstart-note { color: var(--fg-muted); font-size: 14px; margin: 16px 0 0; }
+  .quickstart-note a { color: var(--accent); }
+
+  footer.site { padding: 40px 0 56px; border-top: 1px solid var(--border); }
+  .footer-notes { color: var(--fg-dim); font-size: 13px; line-height: 1.6; margin-bottom: 14px; }
+  .footer-notes strong { color: var(--fg-muted); }
+  footer.site .wrap a { color: var(--fg-muted); font-size: 13px; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 30px; }
+    .hero { padding: 64px 0 40px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <img src="img/logo-mark.svg" width="26" height="26" alt="" />
+      Thread<span class="accent">beam</span>
+    </a>
+    <nav class="site-nav">
+      <a href="#features">Features</a>
+      <a href="#screenshot">Screenshot</a>
+      <a href="#quickstart">Quickstart</a>
+      <span class="ai-badge" title="Threadbeam was coded by AI coding agents (Claude and Mistral) under human direction">Coded by AI agents</span>
+      <button class="theme-toggle" id="theme-toggle" type="button">Theme: Dark</button>
+      <a class="btn btn-primary" href="https://github.com/tomlawesome/threadbeam">GitHub →</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="hero-bg"></div>
+  <div class="wrap">
+    <p class="eyebrow">Concurrent AI coding-agent delivery · read-only</p>
+    <h1>See what every agent<br/>is <span class="accent">doing right now.</span></h1>
+    <p class="hero-sub">
+      Threadbeam turns a closed, validated stream of lifecycle events into one
+      live view of what each agent is working on, what's blocked, what needs
+      an answer, and what's landed — across as many concurrent repos as
+      you're tracking. It never reads transcripts, prompts, source, or diffs,
+      and it can never launch, steer, or stop an agent. Just
+      <code>node server.mjs</code>.
+    </p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="https://github.com/tomlawesome/threadbeam">View on GitHub</a>
+      <a class="btn btn-ghost" href="#quickstart">Quickstart →</a>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="wrap">
+    <p class="section-label">What it shows you</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <img src="img/feature-live-tasks.png" alt="Live task table with provider, model, task, project, branch, state, and activity columns" />
+        <div class="feature-card-body">
+          <h3>Every provider, one table</h3>
+          <p>Codex, Claude, Mistral, Ollama, and Luna side by side — sortable
+          by state, project, or activity, colour-coded so a glance tells you
+          who's doing what.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="img/feature-blockers.png" alt="A blocker card showing cause, owner, next action, and age" />
+        <div class="feature-card-body">
+          <h3>Blockers and questions, up front</h3>
+          <p>A blocked task surfaces its cause, owner, and next action —
+          not just a red badge buried in a table row.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="img/feature-project-breakdown.png" alt="A by-project breakdown table with active, blocker, question, and completed counts per project" />
+        <div class="feature-card-body">
+          <h3>Per-project rollups</h3>
+          <p>Tracking several repos through one instance? The same four
+          counts the summary shows, broken down by project.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="img/feature-metrics.png" alt="Delivery metrics cards showing completions and average time per provider, plus average blocker resolution time" />
+        <div class="feature-card-body">
+          <h3>Delivery metrics</h3>
+          <p>Completions and average time-to-complete per provider, and
+          average time-to-resolve for blockers — derived from the same
+          event log, nothing new to configure.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="img/feature-toolbar.png" alt="The toolbar showing a dark mode toggle and a notifications-on toggle" />
+        <div class="feature-card-body">
+          <h3>Notifications, opt-in</h3>
+          <p>A browser notification the moment a task is genuinely newly
+          blocked or asks a question — never on page load, never repeated
+          for the same still-open item.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-body" style="padding-top:20px">
+          <h3>Zero dependencies, one binary of a container</h3>
+          <p>Node.js 22 built-ins only. A strict stdin-only event emitter,
+          an owner-private JSONL store, and a hardened, read-only container
+          — no login, no write endpoint, no GitHub access.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="proof" id="screenshot">
+  <div class="wrap">
+    <p class="section-label">The whole dashboard</p>
+    <div class="proof-frame">
+      <div class="chrome"><span></span><span></span><span></span></div>
+      <img data-theme-img="dark" src="img/dashboard-dark.png" alt="The full Threadbeam dashboard, dark theme: summary counters, per-project breakdown, blockers, questions, live task table, completed history, timeline, and delivery metrics, all populated with synthetic data" />
+      <img data-theme-img="light" src="img/dashboard-light.png" alt="The full Threadbeam dashboard, light theme: summary counters, per-project breakdown, blockers, questions, live task table, completed history, timeline, and delivery metrics, all populated with synthetic data" />
+    </div>
+  </div>
+</section>
+
+<section class="quickstart" id="quickstart">
+  <div class="wrap">
+    <p class="section-label">Quickstart</p>
+    <div class="terminal">
+      <div class="chrome"><span></span><span></span><span></span></div>
+      <pre><span class="prompt">$</span> <span class="cmd">node server.mjs</span>
+<span class="prompt">$</span> <span class="cmd">open http://127.0.0.1:4317</span>
+
+<span class="prompt">$</span> <span class="cmd">echo</span> <span class="val">'{"schemaVersion":1,"provider":"claude","repo":"example/project","project":"example-project","taskId":"issue-42","state":"implementing","model":"claude-sonnet-5","branch":"agent/issue-42","worktree":"issue-42","timestamp":"2026-08-02T00:00:00Z"}'</span> \
+    | <span class="cmd">node bin/emit.mjs</span></pre>
+    </div>
+    <p class="quickstart-note">
+      No dependency installation, no login, loopback by default. See
+      <a href="https://github.com/tomlawesome/threadbeam#readme">the README</a>
+      for the container quickstart, the full event contract, and
+      <a href="https://github.com/tomlawesome/threadbeam/blob/main/docs/adapters.md">docs/adapters.md</a>
+      for wiring up a bounded-task wrapper automatically.
+    </p>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="footer-notes">
+      <p>Threadbeam is an independent, personal project.</p>
+      <p><strong>Development disclosure:</strong> Threadbeam was coded by AI
+      coding agents (Claude and Mistral) under human direction.</p>
+    </div>
+    <a href="https://github.com/tomlawesome/threadbeam">github.com/tomlawesome/threadbeam</a>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var order = ['dark', 'light'];
+    var pref = localStorage.getItem('threadbeam-site-theme') || 'dark';
+    var btn = document.getElementById('theme-toggle');
+    function apply() {
+      if (pref === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      else document.documentElement.removeAttribute('data-theme');
+      btn.textContent = 'Theme: ' + pref.charAt(0).toUpperCase() + pref.slice(1);
+      localStorage.setItem('threadbeam-site-theme', pref);
+    }
+    btn.addEventListener('click', function () {
+      pref = order[(order.indexOf(pref) + 1) % order.length];
+      apply();
+    });
+    apply();
+  })();
+</script>
+
+</body>
+</html>

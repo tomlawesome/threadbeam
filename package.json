@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node server.mjs",
     "emit": "node bin/emit.mjs",
+    "capture:readme": "node scripts/capture-readme-screenshot.mjs",
     "test": "node --test test/*.node-test.mjs"
   },
   "dependencies": {},

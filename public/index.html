@@ -18,130 +18,158 @@
         <p id="status-banner" class="status-banner" role="status" aria-live="polite"></p>
         <button id="refresh-button" type="button">Refresh now</button>
         <div class="topbar-controls">
-          <fieldset class="theme-picker">
-            <legend class="visually-hidden">Accent theme</legend>
-            <button type="button" class="theme-swatch theme-swatch-ocean" data-theme="ocean" aria-pressed="true" aria-label="Ocean accent theme"></button>
-            <button type="button" class="theme-swatch theme-swatch-violet" data-theme="violet" aria-pressed="false" aria-label="Violet accent theme"></button>
-            <button type="button" class="theme-swatch theme-swatch-amber" data-theme="amber" aria-pressed="false" aria-label="Amber accent theme"></button>
-            <button type="button" class="theme-swatch theme-swatch-emerald" data-theme="emerald" aria-pressed="false" aria-label="Emerald accent theme"></button>
-            <button type="button" class="theme-swatch theme-swatch-rose" data-theme="rose" aria-pressed="false" aria-label="Rose accent theme"></button>
-          </fieldset>
           <button id="mode-toggle" type="button" class="mode-toggle" aria-pressed="true">
             <span id="mode-toggle-label">Dark mode</span>
+          </button>
+          <button id="notifications-toggle" type="button" class="notifications-toggle" aria-pressed="false">
+            <span id="notifications-toggle-label">Enable notifications</span>
           </button>
         </div>
       </div>
     </header>
 
     <main>
-      <section class="summary-panel" aria-labelledby="summary-heading">
-        <div class="summary-heading-row">
-          <h2 id="summary-heading">At a glance</h2>
-          <button id="summary-filter-all" class="summary-filter-all" type="button" aria-pressed="true">
-            View all
-          </button>
-        </div>
-        <div class="summary-strip" aria-label="Filter activity by status">
-          <button class="stat stat-filter" type="button" data-filter="live" aria-pressed="false" aria-controls="live-tasks-section">
-            <span class="stat-value" id="summary-active">0</span>
-            <span class="stat-label">Active tasks</span>
-          </button>
-          <button class="stat stat-filter stat-blockers" type="button" data-filter="blockers" aria-pressed="false" aria-controls="blockers-section">
-            <span class="stat-value" id="summary-blockers">0</span>
-            <span class="stat-label">Blockers</span>
-          </button>
-          <button class="stat stat-filter stat-questions" type="button" data-filter="questions" aria-pressed="false" aria-controls="questions-section">
-            <span class="stat-value" id="summary-questions">0</span>
-            <span class="stat-label">Open questions</span>
-          </button>
-          <button class="stat stat-filter stat-completed" type="button" data-filter="completed" aria-pressed="false" aria-controls="completed-section">
-            <span class="stat-value" id="summary-completed">0</span>
-            <span class="stat-label">Recently completed</span>
-          </button>
-        </div>
-        <p id="summary-filter-status" class="summary-filter-status" role="status" aria-live="polite">Showing all activity.</p>
-      </section>
+      <!-- Tier 1: demands action. Renders nothing (both sections hidden by
+           app.js) when there are no blockers and no questions -- an empty
+           state here would cost permanent space to say "nothing is wrong,"
+           which is exactly the information that doesn't need a card. -->
+      <div class="tier tier-action" id="tier-action">
+        <section id="blockers-section" aria-labelledby="blockers-heading">
+          <h2 id="blockers-heading">Blockers</h2>
+          <ul id="blockers-list" class="row-list"></ul>
+        </section>
 
-      <section id="blockers-section" aria-labelledby="blockers-heading">
-        <h2 id="blockers-heading">Blockers</h2>
-        <ul id="blockers-list" class="row-list"></ul>
-        <p id="blockers-empty" class="empty-state" hidden>No blockers.</p>
-      </section>
+        <section id="questions-section" aria-labelledby="questions-heading">
+          <h2 id="questions-heading">Questions</h2>
+          <ul id="questions-list" class="row-list"></ul>
+        </section>
+      </div>
 
-      <section id="questions-section" aria-labelledby="questions-heading">
-        <h2 id="questions-heading">Questions</h2>
-        <ul id="questions-list" class="row-list"></ul>
-        <p id="questions-empty" class="empty-state" hidden>No open questions.</p>
-      </section>
+      <!-- Tier 2: the working view. Dominant. -->
+      <div class="tier tier-working">
+        <section class="summary-panel" aria-labelledby="summary-heading">
+          <div class="summary-heading-row">
+            <h2 id="summary-heading">At a glance</h2>
+            <button id="summary-filter-all" class="summary-filter-all" type="button" aria-pressed="true">
+              View all
+            </button>
+          </div>
+          <div class="summary-strip" aria-label="Filter activity by status">
+            <button class="stat stat-filter" type="button" data-filter="live" aria-pressed="false" aria-controls="live-tasks-section">
+              <span class="stat-value" id="summary-active">0</span>
+              <span class="stat-label">Active tasks</span>
+            </button>
+            <button class="stat stat-filter stat-blockers" type="button" data-filter="blockers" aria-pressed="false" aria-controls="blockers-section">
+              <span class="stat-value" id="summary-blockers">0</span>
+              <span class="stat-label">Blockers</span>
+            </button>
+            <button class="stat stat-filter stat-questions" type="button" data-filter="questions" aria-pressed="false" aria-controls="questions-section">
+              <span class="stat-value" id="summary-questions">0</span>
+              <span class="stat-label">Open questions</span>
+            </button>
+            <button class="stat stat-filter stat-completed" type="button" data-filter="completed" aria-pressed="false" aria-controls="completed-section">
+              <span class="stat-value" id="summary-completed">0</span>
+              <span class="stat-label">Recently completed</span>
+            </button>
+          </div>
+          <p id="summary-filter-status" class="summary-filter-status" role="status" aria-live="polite">Showing all activity.</p>
+        </section>
 
-      <section id="live-tasks-section" aria-labelledby="live-tasks-heading">
-        <h2 id="live-tasks-heading">Live tasks</h2>
-        <div class="mobile-sort-controls">
-          <label for="mobile-sort-key">Sort live tasks</label>
-          <select id="mobile-sort-key">
-            <option value="">Default order</option>
-            <option value="provider">Provider</option>
-            <option value="model">Model</option>
-            <option value="task">Task</option>
-            <option value="project">Project</option>
-            <option value="branch">Branch / worktree</option>
-            <option value="state">State</option>
-            <option value="activity">Activity</option>
-          </select>
-          <button id="mobile-sort-direction" type="button" disabled>Ascending</button>
-        </div>
-        <table id="live-tasks-table">
-          <caption class="visually-hidden">Currently active agent tasks</caption>
-          <colgroup>
-            <col class="col-provider" />
-            <col class="col-model" />
-            <col class="col-task" />
-            <col class="col-project" />
-            <col class="col-branch" />
-            <col class="col-state" />
-            <col class="col-activity" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="provider">Provider</button>
-              </th>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="model">Model</button>
-              </th>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="task">Task</button>
-              </th>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="project">Project</button>
-              </th>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="branch">Branch / worktree</button>
-              </th>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="state">State</button>
-              </th>
-              <th scope="col" aria-sort="none">
-                <button type="button" class="sort-button" data-sort-key="activity">Activity</button>
-              </th>
-            </tr>
-          </thead>
-          <tbody id="live-tasks-body"></tbody>
-        </table>
-        <p id="live-tasks-empty" class="empty-state" hidden>No live tasks.</p>
-      </section>
+        <section id="live-tasks-section" aria-labelledby="live-tasks-heading">
+          <h2 id="live-tasks-heading">Live tasks</h2>
+          <div class="mobile-sort-controls">
+            <label for="mobile-sort-key">Sort live tasks</label>
+            <select id="mobile-sort-key">
+              <option value="">Default order</option>
+              <option value="provider">Provider</option>
+              <option value="model">Model</option>
+              <option value="task">Task</option>
+              <option value="project">Project</option>
+              <option value="branch">Branch / worktree</option>
+              <option value="state">State</option>
+              <option value="activity">Activity</option>
+            </select>
+            <button id="mobile-sort-direction" type="button" disabled>Ascending</button>
+          </div>
+          <table id="live-tasks-table">
+            <caption class="visually-hidden">Currently active agent tasks</caption>
+            <colgroup>
+              <col class="col-provider" />
+              <col class="col-model" />
+              <col class="col-task" />
+              <col class="col-project" />
+              <col class="col-branch" />
+              <col class="col-state" />
+              <col class="col-activity" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="provider">Provider</button>
+                </th>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="model">Model</button>
+                </th>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="task">Task</button>
+                </th>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="project">Project</button>
+                </th>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="branch">Branch / worktree</button>
+                </th>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="state">State</button>
+                </th>
+                <th scope="col" aria-sort="none">
+                  <button type="button" class="sort-button" data-sort-key="activity">Activity</button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="live-tasks-body"></tbody>
+          </table>
+          <p id="live-tasks-empty" class="empty-state" hidden>No live tasks.</p>
+        </section>
+      </div>
 
-      <section id="completed-section" aria-labelledby="completed-heading">
-        <h2 id="completed-heading">Completed history</h2>
-        <ul id="completed-list" class="feed-list"></ul>
-        <p id="completed-empty" class="empty-state" hidden>No completed tasks yet.</p>
-      </section>
+      <!-- Tier 3: reference. Demoted, two-column at >=1100px. -->
+      <div class="tier tier-reference" id="tier-reference">
+        <section id="project-breakdown-section" aria-labelledby="project-breakdown-heading">
+          <h2 id="project-breakdown-heading">By project</h2>
+          <table id="project-breakdown-table" class="project-breakdown-table">
+            <caption class="visually-hidden">Activity counts broken down by project</caption>
+            <thead>
+              <tr>
+                <th scope="col">Project</th>
+                <th scope="col">Active</th>
+                <th scope="col">Blockers</th>
+                <th scope="col">Questions</th>
+                <th scope="col">Completed</th>
+              </tr>
+            </thead>
+            <tbody id="project-breakdown-body"></tbody>
+          </table>
+        </section>
 
-      <section id="timeline-section" aria-labelledby="timeline-heading">
-        <h2 id="timeline-heading">Timeline</h2>
-        <div id="timeline-list" class="timeline"></div>
-        <p id="timeline-empty" class="empty-state" hidden>No events yet.</p>
-      </section>
+        <section id="completed-section" aria-labelledby="completed-heading">
+          <h2 id="completed-heading">Completed history</h2>
+          <ul id="completed-list" class="feed-list"></ul>
+          <p id="completed-empty" class="empty-state" hidden>No completed tasks yet.</p>
+        </section>
+
+        <section id="timeline-section" aria-labelledby="timeline-heading">
+          <h2 id="timeline-heading">Timeline</h2>
+          <div id="timeline-list" class="timeline"></div>
+          <p id="timeline-empty" class="empty-state" hidden>No events yet.</p>
+        </section>
+
+        <section id="metrics-section" aria-labelledby="metrics-heading">
+          <h2 id="metrics-heading">Delivery metrics</h2>
+          <div id="metrics-grid" class="metrics-grid"></div>
+          <p id="metrics-empty" class="empty-state" hidden>No completions or resolved blockers yet.</p>
+        </section>
+      </div>
     </main>
   </div>
 

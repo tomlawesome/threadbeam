@@ -3,10 +3,8 @@
 const POLL_INTERVAL_MS = 5000;
 const KNOWN_PROVIDERS = ['codex', 'claude', 'mistral', 'ollama', 'luna'];
 
-const THEME_STORAGE_KEY = 'threadbeam:theme';
 const MODE_STORAGE_KEY = 'threadbeam:mode';
-const THEMES = ['ocean', 'violet', 'amber', 'emerald', 'rose'];
-const DEFAULT_THEME = 'ocean';
+const NOTIFICATIONS_STORAGE_KEY = 'threadbeam:notifications';
 const MODES = ['dark', 'light'];
 const DEFAULT_MODE = 'dark';
 const DASHBOARD_FILTERS = {
@@ -41,6 +39,11 @@ let liveSort = { key: null, direction: 'asc' };
 let lastLiveTasks = [];
 let lastStatus = null;
 let dashboardFilter = 'all';
+let seenAttentionKeys = new Set();
+let hasCompletedFirstRefresh = false;
+let projectBreakdownHasMultipleProjects = false;
+let hasBlockers = false;
+let hasQuestions = false;
 
 const el = typeof document === 'undefined' ? {} : {
   liveDot: document.getElementById('live-dot'),
@@ -52,28 +55,34 @@ const el = typeof document === 'undefined' ? {} : {
   summaryFilterAll: document.getElementById('summary-filter-all'),
   summaryFilterButtons: Array.from(document.querySelectorAll('.stat-filter')),
   summaryFilterStatus: document.getElementById('summary-filter-status'),
+  tierAction: document.getElementById('tier-action'),
+  tierReference: document.getElementById('tier-reference'),
+  projectBreakdownSection: document.getElementById('project-breakdown-section'),
+  projectBreakdownBody: document.getElementById('project-breakdown-body'),
   blockersSection: document.getElementById('blockers-section'),
   liveSection: document.getElementById('live-tasks-section'),
   questionsSection: document.getElementById('questions-section'),
   completedSection: document.getElementById('completed-section'),
   timelineSection: document.getElementById('timeline-section'),
+  metricsSection: document.getElementById('metrics-section'),
+  metricsGrid: document.getElementById('metrics-grid'),
+  metricsEmpty: document.getElementById('metrics-empty'),
   liveBody: document.getElementById('live-tasks-body'),
   liveEmpty: document.getElementById('live-tasks-empty'),
   sortButtons: Array.from(document.querySelectorAll('#live-tasks-table .sort-button')),
   mobileSortKey: document.getElementById('mobile-sort-key'),
   mobileSortDirection: document.getElementById('mobile-sort-direction'),
   blockersList: document.getElementById('blockers-list'),
-  blockersEmpty: document.getElementById('blockers-empty'),
   questionsList: document.getElementById('questions-list'),
-  questionsEmpty: document.getElementById('questions-empty'),
   completedList: document.getElementById('completed-list'),
   completedEmpty: document.getElementById('completed-empty'),
   timelineList: document.getElementById('timeline-list'),
   timelineEmpty: document.getElementById('timeline-empty'),
   refreshButton: document.getElementById('refresh-button'),
-  themeSwatches: Array.from(document.querySelectorAll('.theme-swatch')),
   modeToggle: document.getElementById('mode-toggle'),
   modeToggleLabel: document.getElementById('mode-toggle-label'),
+  notificationsToggle: document.getElementById('notifications-toggle'),
+  notificationsToggleLabel: document.getElementById('notifications-toggle-label'),
 };
 
 function formatElapsed(ms) {
@@ -135,6 +144,54 @@ function relativeLastUpdate(lastUpdateAt, now) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+// Breaks the same four "At a glance" counts down per project, so tracking
+// several concurrent repos doesn't hide which project a global count
+// actually belongs to. A task counts in every bucket it appears in, the
+// same non-exclusive way the global counters already work (a blocked task
+// is part of both "live" and "blockers").
+function groupCountsByProject(status) {
+  const counts = new Map();
+  const bump = (item, key) => {
+    const project = projectDisplay(item) || item.project || item.repo || 'unknown';
+    if (!counts.has(project)) {
+      counts.set(project, { project, live: 0, blockers: 0, questions: 0, completed: 0 });
+    }
+    counts.get(project)[key] += 1;
+  };
+  for (const task of status?.live ?? []) bump(task, 'live');
+  for (const blocker of status?.blockers ?? []) bump(blocker, 'blockers');
+  for (const question of status?.questions ?? []) bump(question, 'questions');
+  for (const task of status?.completed ?? []) bump(task, 'completed');
+  return [...counts.values()].sort((a, b) => a.project.localeCompare(b.project));
+}
+
+// Identity for one open blocker/question, scoped by repo+taskId so the same
+// taskId in different repositories is never conflated (matches how the
+// server itself keys tasks). Deliberately excludes blocker/question detail
+// text: an updated cause/nextAction while still blocked is the same open
+// item, not a new one.
+function attentionKey(item, kind) {
+  return `${item.repo} ${item.taskId} ${kind}`;
+}
+
+function computeAttentionKeys(blockers, questions) {
+  const keys = new Set();
+  for (const blocker of blockers) keys.add(attentionKey(blocker, 'blocker'));
+  for (const question of questions) keys.add(attentionKey(question, 'question'));
+  return keys;
+}
+
+// Pure diff against the previously-seen key set: an item is "new" only if
+// its key wasn't present last poll. A blocker that resolves and later
+// recurs is legitimately new again, since its key drops out of
+// previousKeys the poll it resolves.
+function selectNewAttentionItems(previousKeys, blockers, questions) {
+  return {
+    newBlockers: blockers.filter((blocker) => !previousKeys.has(attentionKey(blocker, 'blocker'))),
+    newQuestions: questions.filter((question) => !previousKeys.has(attentionKey(question, 'question'))),
+  };
 }
 
 function clearChildren(node) {
@@ -368,7 +425,7 @@ function attentionRow(kickerText, kickerClass, item) {
 
 function renderBlockers(blockers) {
   clearChildren(el.blockersList);
-  el.blockersEmpty.hidden = blockers.length > 0;
+  hasBlockers = blockers.length > 0;
   for (const blocker of blockers) {
     const { li, detail } = attentionRow('Blocker', 'attn-row-blocker', blocker);
     detail.append(
@@ -383,7 +440,7 @@ function renderBlockers(blockers) {
 
 function renderQuestions(questions) {
   clearChildren(el.questionsList);
-  el.questionsEmpty.hidden = questions.length > 0;
+  hasQuestions = questions.length > 0;
   for (const question of questions) {
     const { li, detail } = attentionRow('Question', 'attn-row-question', question);
     detail.append(
@@ -495,6 +552,97 @@ function renderTimeline(timeline) {
   }
 }
 
+function metricCard(className, chipText, chipClass, valueText, label, detailText) {
+  const card = document.createElement('div');
+  card.className = `metric-card ${className}`;
+
+  const header = document.createElement('div');
+  header.className = 'metric-card-header';
+  const chip = document.createElement('span');
+  chip.className = chipClass;
+  chip.textContent = chipText;
+  header.append(chip);
+
+  const value = document.createElement('p');
+  value.className = 'metric-card-value';
+  value.textContent = valueText;
+
+  const labelEl = document.createElement('p');
+  labelEl.className = 'metric-card-label';
+  labelEl.textContent = label;
+
+  card.append(header, value, labelEl);
+
+  if (detailText) {
+    const detail = document.createElement('p');
+    detail.className = 'metric-card-detail';
+    detail.textContent = detailText;
+    card.append(detail);
+  }
+
+  return card;
+}
+
+function renderMetrics(metrics) {
+  clearChildren(el.metricsGrid);
+  const byProvider = metrics?.byProvider ?? {};
+  const blockers = metrics?.blockers ?? { resolvedCount: 0, avgDurationMs: null };
+
+  const providerCards = KNOWN_PROVIDERS
+    .map((provider) => ({ provider, stats: byProvider[provider] }))
+    .filter((entry) => entry.stats && entry.stats.completed > 0);
+
+  for (const { provider, stats } of providerCards) {
+    el.metricsGrid.append(
+      metricCard(
+        'metric-card-provider',
+        provider,
+        providerChipClass(provider),
+        String(stats.completed),
+        stats.completed === 1 ? 'task completed' : 'tasks completed',
+        stats.avgCompletionMs != null ? `avg ${formatElapsed(stats.avgCompletionMs)} to complete` : null,
+      ),
+    );
+  }
+
+  if (blockers.resolvedCount > 0) {
+    el.metricsGrid.append(
+      metricCard(
+        'metric-card-blockers',
+        'Blockers',
+        'chip metric-chip-blockers',
+        String(blockers.resolvedCount),
+        blockers.resolvedCount === 1 ? 'blocker resolved' : 'blockers resolved',
+        blockers.avgDurationMs != null ? `avg ${formatElapsed(blockers.avgDurationMs)} to resolve` : null,
+      ),
+    );
+  }
+
+  el.metricsEmpty.hidden = providerCards.length > 0 || blockers.resolvedCount > 0;
+}
+
+function projectBreakdownRow(row) {
+  const tr = document.createElement('tr');
+  tr.append(
+    cell('Project', row.project),
+    cell('Active', String(row.live)),
+    cell('Blockers', String(row.blockers)),
+    cell('Questions', String(row.questions)),
+    cell('Completed', String(row.completed)),
+  );
+  return tr;
+}
+
+// Only worth showing once there's more than one project to actually break
+// down -- a single-project setup already sees everything in the global "At
+// a glance" counters, so a one-row table would be pure noise.
+function renderProjectBreakdown(status) {
+  const rows = groupCountsByProject(status);
+  projectBreakdownHasMultipleProjects = rows.length > 1;
+  clearChildren(el.projectBreakdownBody);
+  for (const row of rows) el.projectBreakdownBody.append(projectBreakdownRow(row));
+}
+
 function renderSummary(status) {
   el.summaryActive.textContent = String((status.live ?? []).length);
   el.summaryBlockers.textContent = String((status.blockers ?? []).length);
@@ -510,7 +658,24 @@ function applyDashboardFilter() {
   for (const [filter, config] of Object.entries(DASHBOARD_FILTERS)) {
     el[config.section].hidden = dashboardFilter !== 'all' && dashboardFilter !== filter;
   }
+  // Tier 1 renders nothing at all when empty, regardless of the active
+  // filter -- an empty blockers/questions card would cost permanent space
+  // to say "nothing is wrong," which is exactly what doesn't need one.
+  el.blockersSection.hidden = el.blockersSection.hidden || !hasBlockers;
+  el.questionsSection.hidden = el.questionsSection.hidden || !hasQuestions;
   el.timelineSection.hidden = dashboardFilter !== 'all';
+  el.metricsSection.hidden = dashboardFilter !== 'all';
+  el.projectBreakdownSection.hidden = dashboardFilter !== 'all' || !projectBreakdownHasMultipleProjects;
+
+  // The tier-1/tier-3 wrapper divs carry the between-tier spacing; hide
+  // them too when every section inside is hidden, or that spacing shows up
+  // as blank space with nothing in it.
+  el.tierAction.hidden = el.blockersSection.hidden && el.questionsSection.hidden;
+  el.tierReference.hidden =
+    el.projectBreakdownSection.hidden &&
+    el.completedSection.hidden &&
+    el.timelineSection.hidden &&
+    el.metricsSection.hidden;
 
   el.summaryFilterAll.setAttribute('aria-pressed', String(dashboardFilter === 'all'));
   for (const button of el.summaryFilterButtons) {
@@ -564,39 +729,97 @@ function writeStoredPreference(key, value) {
   }
 }
 
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  for (const button of el.themeSwatches) {
-    button.setAttribute('aria-pressed', String(button.dataset.theme === theme));
-  }
-}
-
 function applyMode(mode) {
   document.documentElement.dataset.mode = mode;
   el.modeToggle.setAttribute('aria-pressed', String(mode === 'dark'));
   el.modeToggleLabel.textContent = mode === 'dark' ? 'Dark mode' : 'Light mode';
 }
 
-function initThemeControls() {
-  const storedTheme = readStoredPreference(THEME_STORAGE_KEY);
-  applyTheme(THEMES.includes(storedTheme) ? storedTheme : DEFAULT_THEME);
-
+function initModeControl() {
   const storedMode = readStoredPreference(MODE_STORAGE_KEY);
   applyMode(MODES.includes(storedMode) ? storedMode : DEFAULT_MODE);
-
-  for (const button of el.themeSwatches) {
-    button.addEventListener('click', () => {
-      const theme = button.dataset.theme;
-      applyTheme(theme);
-      writeStoredPreference(THEME_STORAGE_KEY, theme);
-    });
-  }
 
   el.modeToggle.addEventListener('click', () => {
     const mode = document.documentElement.dataset.mode === 'dark' ? 'light' : 'dark';
     applyMode(mode);
     writeStoredPreference(MODE_STORAGE_KEY, mode);
   });
+}
+
+function notificationsSupported() {
+  return typeof window !== 'undefined' && 'Notification' in window;
+}
+
+// Notifications require both browser permission (which only this session's
+// user can grant, never auto-requested) and the separate local on/off
+// preference below -- granting permission once doesn't force notifications
+// on forever; the user can still switch them off without revoking it.
+function notificationsEnabled() {
+  return (
+    notificationsSupported() &&
+    Notification.permission === 'granted' &&
+    readStoredPreference(NOTIFICATIONS_STORAGE_KEY) === 'true'
+  );
+}
+
+function updateNotificationsControl() {
+  if (!notificationsSupported()) {
+    el.notificationsToggle.hidden = true;
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    el.notificationsToggle.disabled = true;
+    el.notificationsToggle.setAttribute('aria-pressed', 'false');
+    el.notificationsToggleLabel.textContent = 'Notifications blocked';
+    return;
+  }
+  const enabled = notificationsEnabled();
+  el.notificationsToggle.disabled = false;
+  el.notificationsToggle.setAttribute('aria-pressed', String(enabled));
+  el.notificationsToggleLabel.textContent = enabled ? 'Notifications on' : 'Enable notifications';
+}
+
+function initNotificationsControl() {
+  updateNotificationsControl();
+  if (!notificationsSupported()) return;
+
+  el.notificationsToggle.addEventListener('click', async () => {
+    if (Notification.permission === 'denied') {
+      updateNotificationsControl();
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') writeStoredPreference(NOTIFICATIONS_STORAGE_KEY, 'true');
+      updateNotificationsControl();
+      return;
+    }
+    writeStoredPreference(NOTIFICATIONS_STORAGE_KEY, String(!notificationsEnabled()));
+    updateNotificationsControl();
+  });
+}
+
+function notifyAttentionItem(item, kind) {
+  const title = kind === 'blocker' ? `Blocked: ${taskLabel(item)}` : `Question: ${taskLabel(item)}`;
+  const body = kind === 'blocker' ? item.blocker.cause : item.question.question;
+  try {
+    new Notification(title, { body, tag: attentionKey(item, kind) });
+  } catch {
+    // Construction can throw in some contexts; never let it break polling.
+  }
+}
+
+// Only ever fires for an item that is genuinely new since the *previous*
+// poll -- never on the very first refresh (hasCompletedFirstRefresh guards
+// that), and never again for the same still-open item on later polls.
+function trackAttentionNotifications(blockers, questions) {
+  if (hasCompletedFirstRefresh && notificationsEnabled()) {
+    const { newBlockers, newQuestions } = selectNewAttentionItems(seenAttentionKeys, blockers, questions);
+    for (const blocker of newBlockers) notifyAttentionItem(blocker, 'blocker');
+    for (const question of newQuestions) notifyAttentionItem(question, 'question');
+  }
+  seenAttentionKeys = computeAttentionKeys(blockers, questions);
+  hasCompletedFirstRefresh = true;
 }
 
 async function refresh() {
@@ -609,12 +832,15 @@ async function refresh() {
     const status = await response.json();
     lastStatus = status;
     renderSummary(status);
+    renderProjectBreakdown(status);
     lastLiveTasks = status.live ?? [];
     renderLiveTasks(lastLiveTasks);
     renderBlockers(status.blockers ?? []);
     renderQuestions(status.questions ?? []);
+    trackAttentionNotifications(status.blockers ?? [], status.questions ?? []);
     renderCompleted(status.completed ?? []);
     renderTimeline(status.timeline ?? []);
+    renderMetrics(status.metrics);
     applyDashboardFilter();
     const generated = formatTime(status.generatedAt);
     const parseErrors = status.parseErrors ?? 0;
@@ -631,9 +857,10 @@ async function refresh() {
 
 if (typeof document !== 'undefined') {
   el.refreshButton.addEventListener('click', refresh);
-  initThemeControls();
+  initModeControl();
   initLiveSortControls();
   initDashboardFilters();
+  initNotificationsControl();
 
   refresh();
   setInterval(refresh, POLL_INTERVAL_MS);
@@ -648,4 +875,8 @@ export {
   projectDisplay,
   relativeLastUpdate,
   LIVE_COLUMNS,
+  attentionKey,
+  computeAttentionKeys,
+  selectNewAttentionItems,
+  groupCountsByProject,
 };
