@@ -42,6 +42,8 @@ let dashboardFilter = 'all';
 let seenAttentionKeys = new Set();
 let hasCompletedFirstRefresh = false;
 let projectBreakdownHasMultipleProjects = false;
+let hasBlockers = false;
+let hasQuestions = false;
 
 const el = typeof document === 'undefined' ? {} : {
   liveDot: document.getElementById('live-dot'),
@@ -53,6 +55,8 @@ const el = typeof document === 'undefined' ? {} : {
   summaryFilterAll: document.getElementById('summary-filter-all'),
   summaryFilterButtons: Array.from(document.querySelectorAll('.stat-filter')),
   summaryFilterStatus: document.getElementById('summary-filter-status'),
+  tierAction: document.getElementById('tier-action'),
+  tierReference: document.getElementById('tier-reference'),
   projectBreakdownSection: document.getElementById('project-breakdown-section'),
   projectBreakdownBody: document.getElementById('project-breakdown-body'),
   blockersSection: document.getElementById('blockers-section'),
@@ -69,9 +73,7 @@ const el = typeof document === 'undefined' ? {} : {
   mobileSortKey: document.getElementById('mobile-sort-key'),
   mobileSortDirection: document.getElementById('mobile-sort-direction'),
   blockersList: document.getElementById('blockers-list'),
-  blockersEmpty: document.getElementById('blockers-empty'),
   questionsList: document.getElementById('questions-list'),
-  questionsEmpty: document.getElementById('questions-empty'),
   completedList: document.getElementById('completed-list'),
   completedEmpty: document.getElementById('completed-empty'),
   timelineList: document.getElementById('timeline-list'),
@@ -423,7 +425,7 @@ function attentionRow(kickerText, kickerClass, item) {
 
 function renderBlockers(blockers) {
   clearChildren(el.blockersList);
-  el.blockersEmpty.hidden = blockers.length > 0;
+  hasBlockers = blockers.length > 0;
   for (const blocker of blockers) {
     const { li, detail } = attentionRow('Blocker', 'attn-row-blocker', blocker);
     detail.append(
@@ -438,7 +440,7 @@ function renderBlockers(blockers) {
 
 function renderQuestions(questions) {
   clearChildren(el.questionsList);
-  el.questionsEmpty.hidden = questions.length > 0;
+  hasQuestions = questions.length > 0;
   for (const question of questions) {
     const { li, detail } = attentionRow('Question', 'attn-row-question', question);
     detail.append(
@@ -656,9 +658,24 @@ function applyDashboardFilter() {
   for (const [filter, config] of Object.entries(DASHBOARD_FILTERS)) {
     el[config.section].hidden = dashboardFilter !== 'all' && dashboardFilter !== filter;
   }
+  // Tier 1 renders nothing at all when empty, regardless of the active
+  // filter -- an empty blockers/questions card would cost permanent space
+  // to say "nothing is wrong," which is exactly what doesn't need one.
+  el.blockersSection.hidden = el.blockersSection.hidden || !hasBlockers;
+  el.questionsSection.hidden = el.questionsSection.hidden || !hasQuestions;
   el.timelineSection.hidden = dashboardFilter !== 'all';
   el.metricsSection.hidden = dashboardFilter !== 'all';
   el.projectBreakdownSection.hidden = dashboardFilter !== 'all' || !projectBreakdownHasMultipleProjects;
+
+  // The tier-1/tier-3 wrapper divs carry the between-tier spacing; hide
+  // them too when every section inside is hidden, or that spacing shows up
+  // as blank space with nothing in it.
+  el.tierAction.hidden = el.blockersSection.hidden && el.questionsSection.hidden;
+  el.tierReference.hidden =
+    el.projectBreakdownSection.hidden &&
+    el.completedSection.hidden &&
+    el.timelineSection.hidden &&
+    el.metricsSection.hidden;
 
   el.summaryFilterAll.setAttribute('aria-pressed', String(dashboardFilter === 'all'));
   for (const button of el.summaryFilterButtons) {
