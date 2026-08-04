@@ -7,36 +7,52 @@
 <meta name="description" content="A lightweight, self-hosted, deliberately read-only dashboard for seeing concurrent AI coding-agent work, blockers, questions, and delivery status at a glance." />
 <link rel="icon" type="image/svg+xml" href="img/logo-mark.svg" />
 <style>
+  /* Same palette as the app (public/styles.css) -- kept in sync by hand
+     since this is a standalone static page, not a build of the app. See
+     issue #17 for the token architecture and measured contrast ratios. */
   :root {
-    --bg: #0b0f14;
-    --bg-elevated: #12161f;
-    --bg-hover: #171c27;
-    --border: #232a38;
-    --fg: #f2f5f8;
-    --fg-muted: #a9b6c4;
-    --fg-dim: #6b7686;
-    --accent: #6cb8ff;
-    --brand: #2f6fe0;
-    --ok: #7be08c;
-    --danger: #ff8a80;
-    --warning: #ffd479;
-    --provider-codex: #b39cff;
-    --provider-claude: #ffb37a;
-    --provider-mistral: #7ad9ff;
-    --provider-ollama: #8ce8b0;
-    --provider-luna: #ff9ecb;
+    --bg: #0a0b0f;
+    --bg-elevated: #121419;
+    --bg-hover: #1a1d24;
+    --border: #23272f;
+    --fg: #e8eaed;
+    --fg-muted: #9ba3af;
+    --fg-dim: #7d848f;
+    --accent: #5b8cff;
+    --on-accent: #06121f;
+    --ok: #3fcf7f;
+    --danger: #f4645f;
+    --warning: #e8b13a;
+    --provider-codex: #9b8cff;
+    --provider-claude: #f0a56a;
+    --provider-mistral: #5cc9e8;
+    --provider-ollama: #63d19e;
+    --provider-luna: #f08cc4;
     --font-sans: -apple-system, 'Segoe UI', system-ui, Roboto, sans-serif;
     --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
     color-scheme: dark;
   }
   :root[data-theme='light'] {
-    --bg: #f6f7f9;
+    --bg: #fbfbfc;
     --bg-elevated: #ffffff;
-    --bg-hover: #eef0f3;
-    --border: #e1e4e9;
-    --fg: #12141a;
-    --fg-muted: #4b5462;
+    --bg-hover: #f4f5f7;
+    --border: #e4e6ea;
+    --fg: #16181d;
+    --fg-muted: #4b5563;
     --fg-dim: #6b7280;
+    /* Deeper than the dark-mode accent -- a wash of the pale dark-mode
+       value reads too washed-out against a light page, same reasoning as
+       the app's own light-mode override. Needs light on-accent text. */
+    --accent: #3b5bdb;
+    --on-accent: #ffffff;
+    --ok: #1e7d3c;
+    --danger: #b3261e;
+    --warning: #8a5a00;
+    --provider-codex: #6a4fd6;
+    --provider-claude: #9a4e00;
+    --provider-mistral: #0f7ea8;
+    --provider-ollama: #146b3d;
+    --provider-luna: #a3305d;
     color-scheme: light;
   }
 
@@ -50,7 +66,7 @@
     -webkit-font-smoothing: antialiased;
   }
   img { max-width: 100%; display: block; }
-  ::selection { background: var(--accent); color: #06121f; }
+  ::selection { background: var(--accent); color: var(--on-accent); }
 
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
 
@@ -109,8 +125,8 @@
     cursor: pointer;
     font-family: inherit;
   }
-  .btn-primary { background: var(--brand); color: #fff; }
-  .btn-primary:hover { background: #2560c9; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover { filter: brightness(1.1); }
   .btn-ghost { border-color: var(--border); color: var(--fg); background: transparent; }
   .btn-ghost:hover { border-color: var(--fg-muted); }
   .theme-toggle {
@@ -130,8 +146,8 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(900px 420px at 82% -10%, rgba(108, 184, 255, 0.14), transparent 60%),
-      radial-gradient(600px 320px at 0% 100%, rgba(123, 224, 140, 0.06), transparent 60%);
+      radial-gradient(900px 420px at 82% -10%, rgba(91, 140, 255, 0.14), transparent 60%),
+      radial-gradient(600px 320px at 0% 100%, rgba(63, 207, 127, 0.06), transparent 60%);
     pointer-events: none;
   }
   .hero .wrap { position: relative; }

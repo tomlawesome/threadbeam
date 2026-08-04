@@ -99,11 +99,10 @@ test('GET / serves the static index page', async (t) => {
   });
 });
 
-test('GET / serves the reordered sections plus theme, mode and sort controls', async (t) => {
+test('GET / serves the reordered sections plus mode and sort controls', async (t) => {
   await withServer(t, async ({ port }) => {
     const res = await request(port, { path: '/' });
     assert.equal(res.statusCode, 200);
-    assert.match(res.body, /class="theme-swatch/);
     assert.match(res.body, /id="mode-toggle"/);
     assert.match(res.body, /aria-sort="none"/);
     assert.ok(

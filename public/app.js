@@ -3,11 +3,8 @@
 const POLL_INTERVAL_MS = 5000;
 const KNOWN_PROVIDERS = ['codex', 'claude', 'mistral', 'ollama', 'luna'];
 
-const THEME_STORAGE_KEY = 'threadbeam:theme';
 const MODE_STORAGE_KEY = 'threadbeam:mode';
 const NOTIFICATIONS_STORAGE_KEY = 'threadbeam:notifications';
-const THEMES = ['ocean', 'violet', 'amber', 'emerald', 'rose'];
-const DEFAULT_THEME = 'ocean';
 const MODES = ['dark', 'light'];
 const DEFAULT_MODE = 'dark';
 const DASHBOARD_FILTERS = {
@@ -80,7 +77,6 @@ const el = typeof document === 'undefined' ? {} : {
   timelineList: document.getElementById('timeline-list'),
   timelineEmpty: document.getElementById('timeline-empty'),
   refreshButton: document.getElementById('refresh-button'),
-  themeSwatches: Array.from(document.querySelectorAll('.theme-swatch')),
   modeToggle: document.getElementById('mode-toggle'),
   modeToggleLabel: document.getElementById('mode-toggle-label'),
   notificationsToggle: document.getElementById('notifications-toggle'),
@@ -716,33 +712,15 @@ function writeStoredPreference(key, value) {
   }
 }
 
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  for (const button of el.themeSwatches) {
-    button.setAttribute('aria-pressed', String(button.dataset.theme === theme));
-  }
-}
-
 function applyMode(mode) {
   document.documentElement.dataset.mode = mode;
   el.modeToggle.setAttribute('aria-pressed', String(mode === 'dark'));
   el.modeToggleLabel.textContent = mode === 'dark' ? 'Dark mode' : 'Light mode';
 }
 
-function initThemeControls() {
-  const storedTheme = readStoredPreference(THEME_STORAGE_KEY);
-  applyTheme(THEMES.includes(storedTheme) ? storedTheme : DEFAULT_THEME);
-
+function initModeControl() {
   const storedMode = readStoredPreference(MODE_STORAGE_KEY);
   applyMode(MODES.includes(storedMode) ? storedMode : DEFAULT_MODE);
-
-  for (const button of el.themeSwatches) {
-    button.addEventListener('click', () => {
-      const theme = button.dataset.theme;
-      applyTheme(theme);
-      writeStoredPreference(THEME_STORAGE_KEY, theme);
-    });
-  }
 
   el.modeToggle.addEventListener('click', () => {
     const mode = document.documentElement.dataset.mode === 'dark' ? 'light' : 'dark';
@@ -862,7 +840,7 @@ async function refresh() {
 
 if (typeof document !== 'undefined') {
   el.refreshButton.addEventListener('click', refresh);
-  initThemeControls();
+  initModeControl();
   initLiveSortControls();
   initDashboardFilters();
   initNotificationsControl();
