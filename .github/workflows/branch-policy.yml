@@ -13,6 +13,11 @@ on:
     branches: [main, preview]
     types: [opened, reopened, synchronize, edited]
 
+# This job only reads the PR event payload (github.event.pull_request.*)
+# -- no checkout, no API calls -- so the GITHUB_TOKEN needs no scopes at
+# all, rather than inheriting the default (broader) permission set.
+permissions: {}
+
 jobs:
   enforce:
     name: Enforce dev -> preview -> main
