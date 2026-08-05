@@ -19,6 +19,11 @@ services:
       THREADBEAM_HOST: 0.0.0.0
       THREADBEAM_PORT: 4317
       THREADBEAM_STORE_DIR: /data
+      # Optional -- minutes since a task's last event before it's
+      # reported as "stale" instead of its last known status. Must be a
+      # positive whole number; unset/invalid falls back to the default
+      # of 20 rather than failing to start. See README.md.
+      # THREADBEAM_STALE_MINUTES: 20
     ports:
       - "${THREADBEAM_PUBLISH_ADDRESS:-127.0.0.1}:${THREADBEAM_PUBLISH_PORT:-4317}:4317"
     volumes:
