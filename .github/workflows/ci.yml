@@ -1,15 +1,16 @@
 name: CI
 
+# Three-lane model, same structure as this project's siblings (mikroview,
+# birdcage): dev (light, fast feedback, unprotected) -> preview
+# (protected, extended testing gate, publishes the release candidate
+# image) -> main (protected, promotion only -- retags preview's exact
+# tested digest, never rebuilds).
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [main, preview, dev]
   pull_request:
-    branches:
-      - main
-      - dev
-  workflow_dispatch:
+    branches: [main, preview, dev]
+  workflow_dispatch: {}
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -35,8 +36,12 @@ jobs:
       - name: Run tests
         run: npm test
 
+  # Not run on dev, matching "dev stays light" -- the extended gate
+  # (this, plus CodeQL) is what preview exists for, before anything is
+  # eligible to move toward main.
   container:
     name: Container smoke test
+    if: github.base_ref != 'dev' && github.ref_name != 'dev'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
