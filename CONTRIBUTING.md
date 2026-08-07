@@ -36,3 +36,11 @@ Do not include a real event store, credentials, private repository data,
 transcripts, generated logs, or screenshots containing sensitive information.
 
 All required GitHub checks must pass before merge.
+
+## Security by design
+
+New features are researched before they are designed — including an
+explicit CVE search and a comparison against known secure and insecure
+implementations. See
+[docs/security-by-design.md](docs/security-by-design.md) for what that
+requires and why.
