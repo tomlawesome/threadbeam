@@ -171,6 +171,15 @@ jobs:
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The only job that can move :latest, so it is the only one gated on
+    # an environment. production allows protected branches only, which
+    # means a workflow_dispatch from an unprotected branch cannot reach
+    # the promotion even if the ref_name guard above were edited away.
+    # No approval reviewers: the preview -> main pull request is already
+    # the human decision point, and a second click would gate the same
+    # call twice. The environment is also where any registry credential
+    # beyond GITHUB_TOKEN should live if one is ever needed.
+    environment: production
     permissions:
       contents: read
       packages: write
