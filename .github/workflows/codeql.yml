@@ -1,16 +1,16 @@
 name: CodeQL
 
-# Not run on dev -- matches the three-lane model's "dev stays light"
-# principle (see ci.yml); preview and main both get it.
 on:
   push:
     branches:
       - main
       - preview
+      - dev
   pull_request:
     branches:
       - main
       - preview
+      - dev
   schedule:
     - cron: "37 2 * * 6"
   workflow_dispatch:
