@@ -7,6 +7,10 @@ updates:
   # actually drift.
   - package-ecosystem: github-actions
     directory: /
+    # Target the integration branch explicitly rather than inheriting the
+    # repository default, so updates keep following dev -> preview -> main
+    # even if the default branch changes.
+    target-branch: dev
     schedule:
       interval: weekly
     groups:
@@ -16,5 +20,6 @@ updates:
 
   - package-ecosystem: docker
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
