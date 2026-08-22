@@ -1,9 +1,13 @@
 # Contributing
 
-Threadbeam welcomes focused bug reports and pull requests that preserve its
-small, read-only security boundary.
+Threadbeam does not accept outside pull requests. Bug reports and issues are
+welcome from anyone, but are treated as information for the maintainer, not
+as work items to be actioned.
 
 ## Before opening a change
+
+Changes are made by the maintainer (or an agent working under their
+direction), never by outside contributors. Before opening a change:
 
 1. Open or reference an issue describing the user outcome, non-goals, security
    impact, and test plan.
